@@ -1,316 +1,252 @@
-/**
- * APP SISO - Backend Centralizado
- */
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login - APP DIST</title>
 
-// --- 1. CORS: Evitar bloqueos ---
-function doOptions(e) {
-  return ContentService.createTextOutput("")
-    .setMimeType(ContentService.MimeType.TEXT);
-}
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+  <script src="config.js"></script>
 
-// --- 2. GET: Routing de Lectura ---
-function doGet(e) {
-  try {
-    var ss = SpreadsheetApp.getActiveSpreadsheet();
-    var action = e.parameter.action;
-
-    // Acción: Obtener todos los registros (Home)
-    if (action === "obtenerRegistros") {
-      var sheet = ss.getSheetByName("checklist");
-      var data = sheet.getDataRange().getValues();
-      var headers = data[0];
-      var records = data.slice(1).map(function(row) {
-        var obj = {};
-        headers.forEach(function(h, i) { obj[h] = row[i]; });
-        return obj;
-      });
-      return ContentService.createTextOutput(JSON.stringify(records)).setMimeType(ContentService.MimeType.JSON);
+  <style>
+    :root {
+      --bg-color: #0b141d;
+      --card-color: #14212d;
+      --accent-color: #003366;
+      --text-color: #ffffff;
+      --muted-text: #a0aec0;
+      --border-color: #2c3e50;
+      --hover-color: #f39c12;
+      --danger-color: #e74c3c;
     }
 
-    // Acción: Obtener un solo registro por ID
-    if (action === "obtenerRegistro") {
-      return ContentService.createTextOutput(JSON.stringify(obtenerRegistroPorId(ss, e.parameter.id)))
-        .setMimeType(ContentService.MimeType.JSON);
+    body {
+      font-family: 'Segoe UI', Arial, sans-serif;
+      background-color: var(--bg-color);
+      color: var(--text-color);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
     }
 
-    // Acción: Obtener personal por ID (Modo modular solicitado)
-    if (action === 'getPersonal') {
-      return ContentService.createTextOutput(JSON.stringify(getPersonalPorId(ss, e.parameter.id)))
-        .setMimeType(ContentService.MimeType.JSON);
+    .login-wrapper {
+      background: var(--card-color);
+      padding: 40px 30px;
+      border-radius: 10px;
+      width: 100%;
+      max-width: 350px;
+      box-shadow: 0 8px 16px rgba(0,0,0,0.5);
+      border: 1px solid var(--border-color);
+      text-align: center;
     }
 
-    // Acción: Login
-    if (action === "login") {
-      return ContentService.createTextOutput(JSON.stringify(validarLogin(ss, e.parameter.user, e.parameter.pass)))
-        .setMimeType(ContentService.MimeType.JSON);
+    .logo-container {
+      background: white;
+      padding: 15px;
+      border-radius: 8px;
+      display: inline-block;
+      margin-bottom: 25px;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.2);
     }
 
-    return ContentService.createTextOutput(JSON.stringify({error: "Acción no reconocida"})).setMimeType(ContentService.MimeType.JSON);
-
-  } catch (error) {
-    return ContentService.createTextOutput(JSON.stringify({ error: error.message })).setMimeType(ContentService.MimeType.JSON);
-  }
-}
-
-// --- 3. POST: Routing de Escritura ---
-function doPost(e) {
-  try {
-    var ss = SpreadsheetApp.getActiveSpreadsheet();
-    var d = JSON.parse(e.postData.contents);
-
-    if (d.action === "login") {
-      return ContentService.createTextOutput(JSON.stringify(validarLogin(ss, d.user, d.pass))).setMimeType(ContentService.MimeType.JSON);
+    .logo-container img {
+      width: 160px;
+      display: block;
     }
 
-    if (d.action === "guardarRespuestasChecklist") {
-      return ContentService.createTextOutput(JSON.stringify(guardarChecklist(ss, d))).setMimeType(ContentService.MimeType.JSON);
+    .login-title {
+      margin: 0 0 20px 0;
+      font-size: 18px;
+      font-weight: 600;
+      letter-spacing: 1px;
     }
 
-    if (d.action === "generarPDF") {
-      return ContentService.createTextOutput(generarPDF(d)).setMimeType(ContentService.MimeType.TEXT);
+    .input-group {
+      position: relative;
+      margin-bottom: 20px;
+      text-align: left;
     }
 
-    return ContentService.createTextOutput(JSON.stringify({ error: "Acción POST no reconocida" })).setMimeType(ContentService.MimeType.JSON);
-
-  } catch (error) {
-    return ContentService.createTextOutput(JSON.stringify({ status: "Error", message: error.message })).setMimeType(ContentService.MimeType.JSON);
-  }
-}
-
-// --- 4. FUNCIONES DE NEGOCIO (LOGICA) ---
-
-function getPersonalPorId(ss, id) {
-  var sheetPersonal = ss.getSheetByName("personal");
-  var personalData = sheetPersonal.getDataRange().getValues();
-  var result = [];
-  for (var p = 1; p < personalData.length; p++) {
-    if (String(personalData[p][0]) === String(id)) {
-      result.push({ n: personalData[p][1], nombre: personalData[p][2], empresa: personalData[p][3], identidad: personalData[p][4], firma: personalData[p][5] });
-    }
-  }
-  return result;
-}
-
-function obtenerRegistroPorId(ss, id) {
-  var sheet = ss.getSheetByName("checklist");
-  var data = sheet.getDataRange().getValues();
-  var headers = data[0];
-  for (var i = 1; i < data.length; i++) {
-    if (String(data[i][0]) === String(id)) {
-      var obj = {};
-      headers.forEach(function(h, idx) { obj[h] = data[i][idx]; });
-      obj.personal = getPersonalPorId(ss, id);
-      return obj;
-    }
-  }
-  return { error: "No encontrado" };
-}
-
-function validarLogin(ss, user, pass) {
-  var sheetUsuarios = ss.getSheetByName("usuarios");
-  var dataUsuarios = sheetUsuarios.getDataRange().getValues();
-  for (var i = 1; i < dataUsuarios.length; i++) {
-    if (dataUsuarios[i][0] == user && dataUsuarios[i][1].toString() == pass) {
-      return { acceso: true, usuario: dataUsuarios[i][0], tipo: dataUsuarios[i][2], sector: dataUsuarios[i][4] };
-    }
-  }
-  return { acceso: false };
-}
-
-function guardarChecklist(ss, d) {
-  var sheetChecklist = ss.getSheetByName("checklist");
-  var idChecklist = d.checklist.col_0;
-  var data = sheetChecklist.getDataRange().getValues();
-  var rowIndex = -1;
-
-  for (var i = 1; i < data.length; i++) {
-    if (String(data[i][0]) === String(idChecklist)) { rowIndex = i + 1; break; }
-  }
-
-  var filaChecklist = [];
-  for (var i = 0; i <= 67; i++) { filaChecklist.push(d.checklist["col_" + i] || ""); }
-
-  if (rowIndex !== -1) {
-    sheetChecklist.getRange(rowIndex, 1, 1, filaChecklist.length).setValues([filaChecklist]);
-  } else {
-    sheetChecklist.appendRow(filaChecklist);
-  }
-
-  // Guardar Personal
-  var sheetPersonal = ss.getSheetByName("personal");
-  var dataPer = sheetPersonal.getDataRange().getValues();
-  for (var p = dataPer.length - 1; p >= 1; p--) {
-    if (String(dataPer[p][0]) === String(idChecklist)) { sheetPersonal.deleteRow(p + 1); }
-  }
-  if (d.personal) {
-    d.personal.forEach(function(p) {
-      sheetPersonal.appendRow([idChecklist, p.n, p.nombre, p.empresa, p.identidad, p.firma]);
-    });
-  }
-  return { status: "Éxito", id_generado: idChecklist };
-}
-
-// ==========================================
-// FUNCIÓN PRINCIPAL: GENERAR PDF (CORREGIDA)
-// ==========================================
-function generarPDF(d) {
-  try {
-    var templateId = "12EXq0J3OjlTQghJDAZToFEqGw3196s9pUq2Yntd1wCo";
-    var folderId = "1xuJB4ZnEVqxp4ZhGW4C2_vnKH-L5xDZ2";
-
-    // 1. Crear copia de la plantilla
-    var newFile = DriveApp.getFileById(templateId).makeCopy("Reporte_" + (d.col_0 || "SinID"), DriveApp.getFolderById(folderId));
-    var ssCopia = SpreadsheetApp.openById(newFile.getId());
-    var sheet = ssCopia.getSheets()[0]; 
-
-    // ========================================================
-    // 2. LLENADO PERSONAL (TABLA DINÁMICA DE ABAJO HACIA ARRIBA)
-    // ========================================================
-    var ssPrincipal = SpreadsheetApp.getActiveSpreadsheet(); 
-    var personal = getPersonalPorId(ssPrincipal, d.col_0); 
-    
-    var filaPlantillaFinder = sheet.createTextFinder("{{N}}").findNext();
-
-    if (personal && personal.length > 0 && filaPlantillaFinder) {
-      var filaInicio = filaPlantillaFinder.getRow();
-      var ultimaColumna = sheet.getMaxColumns(); 
-      var rangoPlantilla = sheet.getRange(filaInicio, 1, 1, ultimaColumna);
-
-      // Si hay más de 1 persona, creamos el espacio vacío debajo
-      if (personal.length > 1) {
-        sheet.insertRowsAfter(filaInicio, personal.length - 1);
-      }
-
-      // 🌟 TRUCO 1: Llenar en reversa. 
-      // Esto evita eliminar filas al final y mantiene las coordenadas de la firma exactas.
-      for (var idx = personal.length - 1; idx >= 0; idx--) {
-        var row = personal[idx];
-        var filaDestino = filaInicio + idx; 
-        var rangoDestino = sheet.getRange(filaDestino, 1, 1, ultimaColumna);
-
-        // Solo clonamos la plantilla visual para las filas nuevas (la primera se sobrescribe)
-        if (idx > 0) {
-          rangoPlantilla.copyTo(rangoDestino);
-        }
-
-        rangoDestino.createTextFinder("{{N}}").replaceAllWith(String(idx + 1));
-        rangoDestino.createTextFinder("{{NOMBRE_TRABAJADOR}}").replaceAllWith(String(row.nombre || ""));
-        rangoDestino.createTextFinder("{{EMPRESA}}").replaceAllWith(String(row.empresa || ""));
-        rangoDestino.createTextFinder("{{IDENTIDAD}}").replaceAllWith(String(row.identidad || ""));
-
-        var firmaFinder = rangoDestino.createTextFinder("{{FIRMA}}").findNext();
-        if (firmaFinder) {
-          if (row.firma) {
-            insertarImagenEnCelda(sheet, row.firma, firmaFinder.getColumn(), firmaFinder.getRow());
-          }
-          firmaFinder.setValue(""); 
-        }
-      }
-    } else if (filaPlantillaFinder) {
-      // Borrar plantilla solo si no hubo ningún trabajador
-      sheet.deleteRow(filaPlantillaFinder.getRow());
+    .input-group i.icon-left {
+      position: absolute;
+      left: 15px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--muted-text);
     }
 
-    // Forzar guardado de la estructura de la tabla antes de seguir
-    SpreadsheetApp.flush(); 
+    .input-group input {
+      width: 100%;
+      padding: 12px 15px 12px 40px;
+      box-sizing: border-box;
+      background-color: var(--bg-color);
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      color: var(--text-color);
+      font-size: 15px;
+      outline: none;
+    }
 
-    // ========================================================
-    // 3. LLENADO DE CAMPOS ESTÁTICOS
-    // ========================================================
-    for (var i = 0; i <= 67; i++) {
-      var val = d["col_" + i] || "";
-      
-      if (i == 3) val = formatearFecha(val);
-      if (i == 17 || i == 18) val = formatearHora(val);
-   
+    .input-group input:focus {
+      border-color: #3498db;
+    }
 
-      if (i === 62 || i === 66) {
-        var range = sheet.createTextFinder("{{col_" + i + "}}").findNext();
-        if (range) {
-          if (val) insertarImagenEnCelda(sheet, val, range.getColumn(), range.getRow());
-          range.setValue(""); 
-        }
+    .btn-toggle-pass {
+      position: absolute;
+      right: 15px;
+      top: 50%;
+      transform: translateY(-50%);
+      border: none;
+      background: none;
+      cursor: pointer;
+      color: var(--muted-text);
+      padding: 0;
+    }
+
+    .btn-enviar {
+      background: var(--accent-color);
+      color: white;
+      border: none;
+      padding: 14px;
+      width: 100%;
+      cursor: pointer;
+      border-radius: 6px;
+      font-weight: bold;
+      font-size: 15px;
+      letter-spacing: 1px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .btn-enviar:hover {
+      background: var(--hover-color);
+    }
+
+    .btn-enviar:disabled {
+      background: #34495e;
+      cursor: not-allowed;
+    }
+
+    .error-message {
+      color: var(--danger-color);
+      font-size: 13px;
+      margin-top: 15px;
+      display: none;
+      font-weight: bold;
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="login-wrapper">
+
+    <div class="logo-container">
+      <img src="https://raw.githubusercontent.com/zelaya27/IMAGENES_AZ/main/UTCD%20Vertical.png" alt="Logo UTCD">
+    </div>
+
+    <h2 class="login-title">ACCESO APP DIST</h2>
+
+    <div class="input-group">
+      <i class="fas fa-user icon-left"></i>
+      <input type="text" id="user" placeholder="Usuario" autocomplete="off">
+    </div>
+
+    <div class="input-group">
+      <i class="fas fa-lock icon-left"></i>
+      <input type="password" id="pass" placeholder="Contraseña">
+      <button type="button" class="btn-toggle-pass" onclick="togglePassword()">
+        <i class="fas fa-eye" id="eye-icon"></i>
+      </button>
+    </div>
+
+    <button class="btn-enviar" id="btn-login" onclick="iniciarSesion()">
+      <span>INICIAR SESIÓN</span>
+      <i class="fas fa-sign-in-alt"></i>
+    </button>
+
+    <div id="mensaje-error" class="error-message"></div>
+
+  </div>
+
+  <script>
+    function togglePassword() {
+      const p = document.getElementById("pass");
+      const icon = document.getElementById("eye-icon");
+
+      if (p.type === "password") {
+        p.type = "text";
+        icon.classList.remove("fa-eye");
+        icon.classList.add("fa-eye-slash");
       } else {
-        sheet.createTextFinder("{{col_" + i + "}}").replaceAllWith(String(val));
+        p.type = "password";
+        icon.classList.remove("fa-eye-slash");
+        icon.classList.add("fa-eye");
       }
     }
 
-    // 4. Asentar todas las imágenes
-    SpreadsheetApp.flush(); 
-    Utilities.sleep(3000); // Elevado a 3 segundos para asegurar renderizado perfecto
-    
-    return "https://docs.google.com/spreadsheets/d/" + ssCopia.getId() + "/export?format=pdf&size=letter&portrait=true&fitw=true";
-    
-  } catch (e) { 
-    return "Error al generar PDF: " + e.toString(); 
-  }
-}
+    async function iniciarSesion() {
+      const user = document.getElementById("user").value.trim();
+      const pass = document.getElementById("pass").value.trim();
+      const btn = document.getElementById("btn-login");
+      const errorMsg = document.getElementById("mensaje-error");
 
-// ========================================================
-// FUNCIONES AUXILIARES 
-// ========================================================
-function getPersonalPorId(ss, idBusqueda) {
-  var sheetPersonal = ss.getSheetByName("personal");
-  if (!sheetPersonal) return [];
-  var data = sheetPersonal.getDataRange().getValues();
-  var personalFiltrado = [];
-  
-  for (var i = 1; i < data.length; i++) { 
-    if (String(data[i][0]) === String(idBusqueda)) {
-      personalFiltrado.push({ n: data[i][1], nombre: data[i][2], empresa: data[i][3], identidad: data[i][4], firma: data[i][5] });
-    }
-  }
-  return personalFiltrado;
-}
-
-function insertarImagenEnCelda(sheet, base64Data, col, row) {
-  try {
-    if (base64Data && typeof base64Data === 'string' && base64Data.includes("base64,")) {
-      var bytes = Utilities.base64Decode(base64Data.split("base64,")[1]);
-      var blob = Utilities.newBlob(bytes, "image/png", "firma_" + row + "_" + col + ".png");
-      
-      var imagen = sheet.insertImage(blob, col, row);
-      
-      // 🌟 TRUCO 2: Obtener el tamaño exacto que tiene la celda destino en tu plantilla
-      var altoCelda = sheet.getRowHeight(row) || 45; 
-      var anchoCelda = sheet.getColumnWidth(col) || 100;
-      
-      var anchoOriginal = imagen.getWidth();
-      var altoOriginal = imagen.getHeight();
-      var ratio = anchoOriginal / altoOriginal;
-      
-      // Restamos 4 píxeles (margen) para que la imagen quede 100% contenida y no flote
-      var altoDeseado = altoCelda - 4; 
-      var anchoDeseado = altoDeseado * ratio;
-
-      // Si la imagen calculada es más ancha que la celda, la reducimos en base al ancho
-      if (anchoDeseado > (anchoCelda - 4)) {
-        anchoDeseado = anchoCelda - 4;
-        altoDeseado = anchoDeseado / ratio;
+      if (!user || !pass) {
+        errorMsg.innerText = "Por favor, completa usuario y contraseña.";
+        errorMsg.style.display = "block";
+        return;
       }
-      
-      imagen.setHeight(altoDeseado); 
-      imagen.setWidth(anchoDeseado); 
-      
-      imagen.setAnchorCell(sheet.getRange(row, col));
-      imagen.setAnchorCellXOffset(2); // Pegada a la esquina pero respetando el margen
-      imagen.setAnchorCellYOffset(2);
+
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Validando...';
+      errorMsg.style.display = "none";
+
+      const datosJSON = {
+        action: "login",
+        user: user,
+        pass: pass
+      };
+
+      try {
+        const response = await fetch(CONFIG.URL_APPS_SCRIPT, {
+          method: "POST",
+          mode: "cors",
+          body: JSON.stringify(datosJSON)
+        });
+
+        const data = await response.json();
+
+        if (data.acceso) {
+          sessionStorage.setItem("usuario", data.usuario);
+          sessionStorage.setItem("tipo_usuario", data.tipo_usuario);
+          sessionStorage.setItem("sector", data.sector);
+
+          window.location.href = "menu.html";
+        } else {
+          errorMsg.innerText = data.error || "Usuario o contraseña incorrectos.";
+          errorMsg.style.display = "block";
+        }
+
+      } catch (error) {
+        console.error("Error en login:", error);
+        errorMsg.innerText = "Error de conexión. Revisa la URL del Apps Script.";
+        errorMsg.style.display = "block";
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<span>INICIAR SESIÓN</span><i class="fas fa-sign-in-alt"></i>';
+      }
     }
-  } catch (e) {
-    Logger.log("Error al insertar firma en fila " + row + ": " + e.toString());
-  }
-}
 
-function formatearFecha(val) {
-  if (!val) return "";
-  var fecha = new Date(val);
-  if (isNaN(fecha.getTime())) return val;
-  return Utilities.formatDate(fecha, Session.getScriptTimeZone(), "dd/MM/yyyy");
-}
+    document.addEventListener("keypress", function(event) {
+      if (event.key === "Enter") {
+        iniciarSesion();
+      }
+    });
+  </script>
 
-function formatearHora(val) {
-  if (!val) return "";
-  var fecha = new Date(val);
-  if (isNaN(fecha.getTime())) return val;
-  return Utilities.formatDate(fecha, Session.getScriptTimeZone(), "HH:mm");
-}
+</body>
+</html>
