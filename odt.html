@@ -1,0 +1,657 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+  <title>ODT - APP DIST</title>
+
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+  <script src="config.js"></script>
+
+  <style>
+    :root {
+      --bg-color:#0b141d;
+      --card-color:#14212d;
+      --accent-color:#003366;
+      --success-color:#27ae60;
+      --danger-color:#e74c3c;
+      --text-color:#ffffff;
+      --muted-text:#a0aec0;
+      --border-color:#2c3e50;
+      --blue-active:#3b82f6;
+    }
+
+    body {
+      margin:0;
+      font-family:'Segoe UI', Arial, sans-serif;
+      background:var(--bg-color);
+      color:var(--text-color);
+    }
+
+    header {
+      background:var(--card-color);
+      padding:12px 15px;
+      display:flex;
+      align-items:center;
+      gap:10px;
+      border-bottom:1px solid var(--border-color);
+      position:sticky;
+      top:0;
+      z-index:20;
+    }
+
+    header h2 {
+      margin:0;
+      font-size:17px;
+    }
+
+    .btn-back-header {
+      background:transparent;
+      color:var(--muted-text);
+      border:1px solid var(--border-color);
+      padding:6px 12px;
+      border-radius:6px;
+      cursor:pointer;
+    }
+
+    .container {
+      padding:15px;
+      padding-bottom:90px;
+    }
+
+    .steps-container {
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      background:var(--card-color);
+      padding:15px 10px;
+      border-radius:12px;
+      margin-bottom:20px;
+    }
+
+    .step-indicator {
+      flex:1;
+      text-align:center;
+      color:var(--muted-text);
+      font-size:12px;
+    }
+
+    .step-circle {
+      width:34px;
+      height:34px;
+      margin:0 auto 5px;
+      border-radius:50%;
+      border:2px solid var(--border-color);
+      display:flex;
+      justify-content:center;
+      align-items:center;
+      font-weight:bold;
+    }
+
+    .step-indicator.active .step-circle {
+      border-color:var(--blue-active);
+      background:var(--accent-color);
+      color:white;
+    }
+
+    .step-indicator.active {
+      color:var(--blue-active);
+      font-weight:bold;
+    }
+
+    .step-content {
+      display:none;
+      background:var(--card-color);
+      border-radius:12px;
+      padding:18px 15px;
+    }
+
+    .step-content.activo {
+      display:block;
+    }
+
+    h3 {
+      margin-top:0;
+      color:var(--blue-active);
+      border-bottom:1px solid var(--border-color);
+      padding-bottom:8px;
+      font-size:16px;
+    }
+
+    .form-grid {
+      display:grid;
+      grid-template-columns:1fr;
+      gap:15px;
+    }
+
+    @media(min-width:700px) {
+      .form-grid {
+        grid-template-columns:repeat(2,1fr);
+      }
+    }
+
+    .form-group {
+      display:flex;
+      flex-direction:column;
+      gap:6px;
+    }
+
+    .full-width {
+      grid-column:1 / -1;
+    }
+
+    label {
+      font-size:13px;
+      color:var(--muted-text);
+      font-weight:600;
+    }
+
+    input, select, textarea {
+      width:100%;
+      box-sizing:border-box;
+      background:var(--bg-color);
+      color:var(--text-color);
+      border:1px solid var(--border-color);
+      border-radius:8px;
+      padding:12px 14px;
+      font-size:15px;
+      outline:none;
+    }
+
+    input:focus, select:focus, textarea:focus {
+      border-color:var(--blue-active);
+    }
+
+    input[readonly] {
+      background:#080f15;
+      color:var(--muted-text);
+    }
+
+    .btn-mini {
+      background:var(--blue-active);
+      color:white;
+      border:none;
+      border-radius:8px;
+      padding:10px;
+      font-weight:bold;
+      cursor:pointer;
+      margin-top:6px;
+    }
+
+    .btn-gps {
+      background:#27ae60;
+    }
+
+    .material-card {
+      background:var(--bg-color);
+      border:1px solid var(--border-color);
+      border-radius:10px;
+      padding:12px;
+      margin-bottom:12px;
+    }
+
+    .btn-add {
+      background:var(--success-color);
+      color:white;
+      border:none;
+      border-radius:8px;
+      padding:12px;
+      font-weight:bold;
+      width:100%;
+      margin:10px 0;
+      cursor:pointer;
+    }
+
+    .btn-delete {
+      background:transparent;
+      color:var(--danger-color);
+      border:1px solid var(--danger-color);
+      border-radius:8px;
+      padding:8px;
+      cursor:pointer;
+      margin-top:8px;
+    }
+
+    .form-actions {
+      position:fixed;
+      bottom:0;
+      left:0;
+      right:0;
+      background:var(--card-color);
+      border-top:1px solid var(--border-color);
+      display:flex;
+      gap:10px;
+      padding:12px;
+      z-index:100;
+    }
+
+    .btn-wizard {
+      flex:1;
+      border:none;
+      border-radius:8px;
+      padding:13px 10px;
+      font-weight:bold;
+      cursor:pointer;
+      color:white;
+    }
+
+    .btn-back {
+      background:#2c3e50;
+    }
+
+    .btn-next {
+      background:var(--blue-active);
+    }
+
+    .btn-save {
+      background:var(--success-color);
+    }
+
+    .modal-bg {
+      display:none;
+      position:fixed;
+      top:0;
+      left:0;
+      right:0;
+      bottom:0;
+      background:rgba(0,0,0,.75);
+      z-index:200;
+      justify-content:center;
+      align-items:center;
+      padding:20px;
+    }
+
+    .modal {
+      background:var(--card-color);
+      border:1px solid var(--border-color);
+      border-radius:12px;
+      padding:18px;
+      width:100%;
+      max-width:430px;
+    }
+
+    .modal-actions {
+      display:flex;
+      gap:10px;
+      margin-top:15px;
+    }
+  </style>
+</head>
+
+<body>
+
+<header>
+  <button class="btn-back-header" onclick="location.href='menu.html'">
+    <i class="fas fa-arrow-left"></i>
+  </button>
+  <h2>ODT</h2>
+</header>
+
+<div class="container">
+
+  <div class="steps-container">
+    <div class="step-indicator active" id="ind-1">
+      <div class="step-circle">1</div>
+      ODT
+    </div>
+    <div class="step-indicator" id="ind-2">
+      <div class="step-circle">2</div>
+      Cuadrilla
+    </div>
+    <div class="step-indicator" id="ind-3">
+      <div class="step-circle">3</div>
+      Supervisor
+    </div>
+  </div>
+
+  <form id="formODT">
+
+    <div class="step-content activo" id="step-1">
+      <h3><i class="fas fa-clipboard-list"></i> Datos Generales ODT</h3>
+
+      <div class="form-grid">
+        <div class="form-group"><label>ID</label><input id="col_0" readonly></div>
+        <div class="form-group"><label>Usuario</label><input id="col_1" readonly></div>
+        <div class="form-group"><label>Sector</label><input id="col_2" readonly></div>
+        <div class="form-group"><label>Estado</label><input id="col_3" readonly></div>
+
+        <div class="form-group"><label>Fecha</label><input type="date" id="col_4"></div>
+        <div class="form-group"><label>Hora llegada</label><input type="time" id="col_5"></div>
+        <div class="form-group"><label>Hora finalizado</label><input type="time" id="col_6"></div>
+
+        <div class="form-group">
+          <label>Razón de Trabajo</label>
+          <select id="col_7">
+            <option value="">Seleccione...</option>
+            <option value="Incidencia de Zona">Incidencia de Zona</option>
+            <option value="Incidencia Acometida/Medidor">Incidencia Acometida/Medidor</option>
+            <option value="Mantenimiento">Mantenimiento</option>
+          </select>
+        </div>
+
+        <div class="form-group full-width">
+          <label>Trabajo Realizado</label>
+          <textarea id="col_8" rows="4"></textarea>
+        </div>
+
+        <div class="form-group"><label>Pintado Apoyo</label><input type="number" id="col_9"></div>
+        <div class="form-group"><label>Medidor</label><input type="number" id="col_10"></div>
+
+        <div class="form-group">
+          <label>GPS</label>
+          <input id="col_11" readonly>
+          <button type="button" class="btn-mini btn-gps" onclick="obtenerGPS()">
+            <i class="fas fa-location-dot"></i> Obtener GPS
+          </button>
+        </div>
+
+        <div class="form-group"><label>UTM</label><input id="col_12"></div>
+
+        <div class="form-group full-width">
+          <button type="button" class="btn-mini" onclick="abrirModal('poste')">
+            <i class="fas fa-bolt"></i> Datos Poste
+          </button>
+          <button type="button" class="btn-mini" onclick="abrirModal('transformador')">
+            <i class="fas fa-charging-station"></i> Datos Transformador
+          </button>
+          <button type="button" class="btn-mini" onclick="abrirModal('control')">
+            <i class="fas fa-sliders"></i> Datos Control
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="step-content" id="step-2">
+      <h3><i class="fas fa-boxes-stacked"></i> Consumo Stock Cuadrilla</h3>
+
+      <div id="listaCuadrilla"></div>
+
+      <button type="button" class="btn-add" onclick="agregarMaterial('cuadrilla')">
+        <i class="fas fa-plus"></i> Agregar Material Cuadrilla
+      </button>
+    </div>
+
+    <div class="step-content" id="step-3">
+      <h3><i class="fas fa-boxes-stacked"></i> Consumo Stock Supervisor</h3>
+
+      <div id="listaSupervisor"></div>
+
+      <button type="button" class="btn-add" onclick="agregarMaterial('supervisor')">
+        <i class="fas fa-plus"></i> Agregar Material Supervisor
+      </button>
+    </div>
+
+  </form>
+</div>
+
+<div class="form-actions">
+  <button class="btn-wizard btn-back" id="btnAnterior" onclick="pasoAnterior()" type="button">Anterior</button>
+  <button class="btn-wizard btn-next" id="btnSiguiente" onclick="siguientePaso()" type="button">Siguiente</button>
+  <button class="btn-wizard btn-save" id="btnGuardar" onclick="guardarODT()" type="button" style="display:none;">Guardar</button>
+</div>
+
+<div class="modal-bg" id="modalBg">
+  <div class="modal">
+    <h3 id="modalTitulo"></h3>
+    <div id="modalContenido"></div>
+
+    <div class="modal-actions">
+      <button class="btn-wizard btn-back" type="button" onclick="cerrarModal()">Cerrar</button>
+      <button class="btn-wizard btn-save" type="button" onclick="cerrarModal()">Aceptar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  let pasoActual = 1;
+  const totalPasos = 3;
+
+  document.addEventListener("DOMContentLoaded", function() {
+    const usuario = sessionStorage.getItem("usuario");
+    const sector = sessionStorage.getItem("sector");
+
+    if (!usuario) {
+      window.location.href = "index.html";
+      return;
+    }
+
+    document.getElementById("col_0").value = generarID();
+    document.getElementById("col_1").value = usuario;
+    document.getElementById("col_2").value = sector;
+    document.getElementById("col_3").value = "Pendiente";
+    document.getElementById("col_4").value = fechaHoy();
+
+    agregarMaterial("cuadrilla");
+    agregarMaterial("supervisor");
+
+    actualizarBotones();
+  });
+
+  function generarID() {
+    const n = Math.floor(100000 + Math.random() * 900000);
+    return "ODT-" + n;
+  }
+
+  function fechaHoy() {
+    const hoy = new Date();
+    return hoy.toISOString().split("T")[0];
+  }
+
+  function siguientePaso() {
+    if (pasoActual < totalPasos) {
+      document.getElementById("step-" + pasoActual).classList.remove("activo");
+      document.getElementById("ind-" + pasoActual).classList.remove("active");
+
+      pasoActual++;
+
+      document.getElementById("step-" + pasoActual).classList.add("activo");
+      document.getElementById("ind-" + pasoActual).classList.add("active");
+
+      actualizarBotones();
+    }
+  }
+
+  function pasoAnterior() {
+    if (pasoActual > 1) {
+      document.getElementById("step-" + pasoActual).classList.remove("activo");
+      document.getElementById("ind-" + pasoActual).classList.remove("active");
+
+      pasoActual--;
+
+      document.getElementById("step-" + pasoActual).classList.add("activo");
+      document.getElementById("ind-" + pasoActual).classList.add("active");
+
+      actualizarBotones();
+    }
+  }
+
+  function actualizarBotones() {
+    document.getElementById("btnAnterior").style.display = pasoActual === 1 ? "none" : "block";
+    document.getElementById("btnSiguiente").style.display = pasoActual === totalPasos ? "none" : "block";
+    document.getElementById("btnGuardar").style.display = pasoActual === totalPasos ? "block" : "none";
+  }
+
+  function obtenerGPS() {
+    if (!navigator.geolocation) {
+      alert("GPS no disponible en este dispositivo.");
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      function(pos) {
+        const lat = pos.coords.latitude.toFixed(6);
+        const lon = pos.coords.longitude.toFixed(6);
+        document.getElementById("col_11").value = lat + ", " + lon;
+      },
+      function() {
+        alert("No se pudo obtener la ubicación.");
+      }
+    );
+  }
+
+  function abrirModal(tipo) {
+    const titulo = document.getElementById("modalTitulo");
+    const contenido = document.getElementById("modalContenido");
+
+    if (tipo === "poste") {
+      titulo.innerHTML = '<i class="fas fa-bolt"></i> Datos Poste';
+      contenido.innerHTML = `
+        ${campoModal("Material Altura", "col_13")}
+        ${campoModal("Estructura Primaria", "col_14")}
+        ${campoModal("Estructura Secundaria", "col_15")}
+        ${campoModal("Retenida", "col_16")}
+      `;
+    }
+
+    if (tipo === "transformador") {
+      titulo.innerHTML = '<i class="fas fa-charging-station"></i> Datos Transformador';
+      contenido.innerHTML = `
+        ${campoModal("KVA/KV Nuevo", "col_17")}
+        ${campoModal("Serie Nuevo", "col_18")}
+        ${campoModal("PP Nuevo", "col_19")}
+        ${campoModal("Marca Nuevo", "col_20")}
+        ${campoModal("KVA/KV Retirado", "col_21")}
+        ${campoModal("Serie Retirado", "col_22")}
+        ${campoModal("PP Retirado", "col_23")}
+        ${campoModal("Marca Retirado", "col_24")}
+      `;
+    }
+
+    if (tipo === "control") {
+      titulo.innerHTML = '<i class="fas fa-sliders"></i> Datos Control';
+      contenido.innerHTML = `
+        ${campoModal("Reporte Energis", "col_25", "number")}
+        ${campoModal("ODT Padre", "col_26", "number")}
+        ${campoModal("Hija", "col_27", "number")}
+        ${campoModal("Evento", "col_28", "number")}
+        ${campoModal("Actividad", "col_29", "number")}
+        ${campoModal("Requisa", "col_30", "number")}
+        ${campoModal("ID Traslado", "col_31", "number")}
+        ${campoModal("Gestionado Por", "col_32")}
+      `;
+    }
+
+    document.getElementById("modalBg").style.display = "flex";
+  }
+
+  function campoModal(label, id, type = "text") {
+    const valor = document.getElementById(id) ? document.getElementById(id).value : "";
+    return `
+      <div class="form-group" style="margin-bottom:12px;">
+        <label>${label}</label>
+        <input type="${type}" id="${id}" value="${valor}">
+      </div>
+    `;
+  }
+
+  function cerrarModal() {
+    document.getElementById("modalBg").style.display = "none";
+  }
+
+  function agregarMaterial(tipo) {
+    const contenedor = tipo === "cuadrilla"
+      ? document.getElementById("listaCuadrilla")
+      : document.getElementById("listaSupervisor");
+
+    const div = document.createElement("div");
+    div.className = "material-card";
+    div.innerHTML = `
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Código Material</label>
+          <input class="codigo-material">
+        </div>
+        <div class="form-group">
+          <label>Nombre Material</label>
+          <input class="nombre-material">
+        </div>
+        <div class="form-group">
+          <label>Unidad</label>
+          <input class="unidad-material">
+        </div>
+        <div class="form-group">
+          <label>Cantidad</label>
+          <input type="number" class="cantidad-material">
+        </div>
+      </div>
+      <button type="button" class="btn-delete" onclick="this.parentElement.remove()">
+        <i class="fas fa-trash"></i> Eliminar
+      </button>
+    `;
+
+    contenedor.appendChild(div);
+  }
+
+  function obtenerMateriales(tipo) {
+    const contenedor = tipo === "cuadrilla"
+      ? document.querySelectorAll("#listaCuadrilla .material-card")
+      : document.querySelectorAll("#listaSupervisor .material-card");
+
+    const materiales = [];
+
+    contenedor.forEach(card => {
+      const codigo = card.querySelector(".codigo-material").value.trim();
+      const nombre = card.querySelector(".nombre-material").value.trim();
+      const unidad = card.querySelector(".unidad-material").value.trim();
+      const cantidad = card.querySelector(".cantidad-material").value.trim();
+
+      if (codigo || nombre || cantidad) {
+        materiales.push({
+          codigo: codigo,
+          nombre: nombre,
+          unidad: unidad,
+          cantidad: cantidad
+        });
+      }
+    });
+
+    return materiales;
+  }
+
+  async function guardarODT() {
+    const btn = document.getElementById("btnGuardar");
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Guardando...';
+
+    const odt = {};
+
+    for (let i = 0; i <= 32; i++) {
+      const campo = document.getElementById("col_" + i);
+      odt["col_" + i] = campo ? campo.value : "";
+    }
+
+    const datos = {
+      action: "guardarODT",
+      odt: odt,
+      consumo_cuadrilla: obtenerMateriales("cuadrilla"),
+      consumo_supervisor: obtenerMateriales("supervisor")
+    };
+
+    try {
+      const response = await fetch(CONFIG.URL_APPS_SCRIPT, {
+        method: "POST",
+        mode: "cors",
+        body: JSON.stringify(datos)
+      });
+
+      const data = await response.json();
+
+      if (data.status === "Éxito") {
+        alert("ODT guardada correctamente: " + data.id);
+        window.location.href = "menu.html";
+      } else {
+        alert("Error: " + (data.message || "No se pudo guardar."));
+      }
+
+    } catch (error) {
+      console.error(error);
+      alert("Error de conexión al guardar.");
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = "Guardar";
+    }
+  }
+</script>
+
+</body>
+</html>
