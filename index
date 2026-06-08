@@ -1,1 +1,316 @@
+/**
+ * APP SISO - Backend Centralizado
+ */
 
+// --- 1. CORS: Evitar bloqueos ---
+function doOptions(e) {
+  return ContentService.createTextOutput("")
+    .setMimeType(ContentService.MimeType.TEXT);
+}
+
+// --- 2. GET: Routing de Lectura ---
+function doGet(e) {
+  try {
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var action = e.parameter.action;
+
+    // Acción: Obtener todos los registros (Home)
+    if (action === "obtenerRegistros") {
+      var sheet = ss.getSheetByName("checklist");
+      var data = sheet.getDataRange().getValues();
+      var headers = data[0];
+      var records = data.slice(1).map(function(row) {
+        var obj = {};
+        headers.forEach(function(h, i) { obj[h] = row[i]; });
+        return obj;
+      });
+      return ContentService.createTextOutput(JSON.stringify(records)).setMimeType(ContentService.MimeType.JSON);
+    }
+
+    // Acción: Obtener un solo registro por ID
+    if (action === "obtenerRegistro") {
+      return ContentService.createTextOutput(JSON.stringify(obtenerRegistroPorId(ss, e.parameter.id)))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+
+    // Acción: Obtener personal por ID (Modo modular solicitado)
+    if (action === 'getPersonal') {
+      return ContentService.createTextOutput(JSON.stringify(getPersonalPorId(ss, e.parameter.id)))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+
+    // Acción: Login
+    if (action === "login") {
+      return ContentService.createTextOutput(JSON.stringify(validarLogin(ss, e.parameter.user, e.parameter.pass)))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+
+    return ContentService.createTextOutput(JSON.stringify({error: "Acción no reconocida"})).setMimeType(ContentService.MimeType.JSON);
+
+  } catch (error) {
+    return ContentService.createTextOutput(JSON.stringify({ error: error.message })).setMimeType(ContentService.MimeType.JSON);
+  }
+}
+
+// --- 3. POST: Routing de Escritura ---
+function doPost(e) {
+  try {
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var d = JSON.parse(e.postData.contents);
+
+    if (d.action === "login") {
+      return ContentService.createTextOutput(JSON.stringify(validarLogin(ss, d.user, d.pass))).setMimeType(ContentService.MimeType.JSON);
+    }
+
+    if (d.action === "guardarRespuestasChecklist") {
+      return ContentService.createTextOutput(JSON.stringify(guardarChecklist(ss, d))).setMimeType(ContentService.MimeType.JSON);
+    }
+
+    if (d.action === "generarPDF") {
+      return ContentService.createTextOutput(generarPDF(d)).setMimeType(ContentService.MimeType.TEXT);
+    }
+
+    return ContentService.createTextOutput(JSON.stringify({ error: "Acción POST no reconocida" })).setMimeType(ContentService.MimeType.JSON);
+
+  } catch (error) {
+    return ContentService.createTextOutput(JSON.stringify({ status: "Error", message: error.message })).setMimeType(ContentService.MimeType.JSON);
+  }
+}
+
+// --- 4. FUNCIONES DE NEGOCIO (LOGICA) ---
+
+function getPersonalPorId(ss, id) {
+  var sheetPersonal = ss.getSheetByName("personal");
+  var personalData = sheetPersonal.getDataRange().getValues();
+  var result = [];
+  for (var p = 1; p < personalData.length; p++) {
+    if (String(personalData[p][0]) === String(id)) {
+      result.push({ n: personalData[p][1], nombre: personalData[p][2], empresa: personalData[p][3], identidad: personalData[p][4], firma: personalData[p][5] });
+    }
+  }
+  return result;
+}
+
+function obtenerRegistroPorId(ss, id) {
+  var sheet = ss.getSheetByName("checklist");
+  var data = sheet.getDataRange().getValues();
+  var headers = data[0];
+  for (var i = 1; i < data.length; i++) {
+    if (String(data[i][0]) === String(id)) {
+      var obj = {};
+      headers.forEach(function(h, idx) { obj[h] = data[i][idx]; });
+      obj.personal = getPersonalPorId(ss, id);
+      return obj;
+    }
+  }
+  return { error: "No encontrado" };
+}
+
+function validarLogin(ss, user, pass) {
+  var sheetUsuarios = ss.getSheetByName("usuarios");
+  var dataUsuarios = sheetUsuarios.getDataRange().getValues();
+  for (var i = 1; i < dataUsuarios.length; i++) {
+    if (dataUsuarios[i][0] == user && dataUsuarios[i][1].toString() == pass) {
+      return { acceso: true, usuario: dataUsuarios[i][0], tipo: dataUsuarios[i][2], sector: dataUsuarios[i][4] };
+    }
+  }
+  return { acceso: false };
+}
+
+function guardarChecklist(ss, d) {
+  var sheetChecklist = ss.getSheetByName("checklist");
+  var idChecklist = d.checklist.col_0;
+  var data = sheetChecklist.getDataRange().getValues();
+  var rowIndex = -1;
+
+  for (var i = 1; i < data.length; i++) {
+    if (String(data[i][0]) === String(idChecklist)) { rowIndex = i + 1; break; }
+  }
+
+  var filaChecklist = [];
+  for (var i = 0; i <= 67; i++) { filaChecklist.push(d.checklist["col_" + i] || ""); }
+
+  if (rowIndex !== -1) {
+    sheetChecklist.getRange(rowIndex, 1, 1, filaChecklist.length).setValues([filaChecklist]);
+  } else {
+    sheetChecklist.appendRow(filaChecklist);
+  }
+
+  // Guardar Personal
+  var sheetPersonal = ss.getSheetByName("personal");
+  var dataPer = sheetPersonal.getDataRange().getValues();
+  for (var p = dataPer.length - 1; p >= 1; p--) {
+    if (String(dataPer[p][0]) === String(idChecklist)) { sheetPersonal.deleteRow(p + 1); }
+  }
+  if (d.personal) {
+    d.personal.forEach(function(p) {
+      sheetPersonal.appendRow([idChecklist, p.n, p.nombre, p.empresa, p.identidad, p.firma]);
+    });
+  }
+  return { status: "Éxito", id_generado: idChecklist };
+}
+
+// ==========================================
+// FUNCIÓN PRINCIPAL: GENERAR PDF (CORREGIDA)
+// ==========================================
+function generarPDF(d) {
+  try {
+    var templateId = "12EXq0J3OjlTQghJDAZToFEqGw3196s9pUq2Yntd1wCo";
+    var folderId = "1xuJB4ZnEVqxp4ZhGW4C2_vnKH-L5xDZ2";
+
+    // 1. Crear copia de la plantilla
+    var newFile = DriveApp.getFileById(templateId).makeCopy("Reporte_" + (d.col_0 || "SinID"), DriveApp.getFolderById(folderId));
+    var ssCopia = SpreadsheetApp.openById(newFile.getId());
+    var sheet = ssCopia.getSheets()[0]; 
+
+    // ========================================================
+    // 2. LLENADO PERSONAL (TABLA DINÁMICA DE ABAJO HACIA ARRIBA)
+    // ========================================================
+    var ssPrincipal = SpreadsheetApp.getActiveSpreadsheet(); 
+    var personal = getPersonalPorId(ssPrincipal, d.col_0); 
+    
+    var filaPlantillaFinder = sheet.createTextFinder("{{N}}").findNext();
+
+    if (personal && personal.length > 0 && filaPlantillaFinder) {
+      var filaInicio = filaPlantillaFinder.getRow();
+      var ultimaColumna = sheet.getMaxColumns(); 
+      var rangoPlantilla = sheet.getRange(filaInicio, 1, 1, ultimaColumna);
+
+      // Si hay más de 1 persona, creamos el espacio vacío debajo
+      if (personal.length > 1) {
+        sheet.insertRowsAfter(filaInicio, personal.length - 1);
+      }
+
+      // 🌟 TRUCO 1: Llenar en reversa. 
+      // Esto evita eliminar filas al final y mantiene las coordenadas de la firma exactas.
+      for (var idx = personal.length - 1; idx >= 0; idx--) {
+        var row = personal[idx];
+        var filaDestino = filaInicio + idx; 
+        var rangoDestino = sheet.getRange(filaDestino, 1, 1, ultimaColumna);
+
+        // Solo clonamos la plantilla visual para las filas nuevas (la primera se sobrescribe)
+        if (idx > 0) {
+          rangoPlantilla.copyTo(rangoDestino);
+        }
+
+        rangoDestino.createTextFinder("{{N}}").replaceAllWith(String(idx + 1));
+        rangoDestino.createTextFinder("{{NOMBRE_TRABAJADOR}}").replaceAllWith(String(row.nombre || ""));
+        rangoDestino.createTextFinder("{{EMPRESA}}").replaceAllWith(String(row.empresa || ""));
+        rangoDestino.createTextFinder("{{IDENTIDAD}}").replaceAllWith(String(row.identidad || ""));
+
+        var firmaFinder = rangoDestino.createTextFinder("{{FIRMA}}").findNext();
+        if (firmaFinder) {
+          if (row.firma) {
+            insertarImagenEnCelda(sheet, row.firma, firmaFinder.getColumn(), firmaFinder.getRow());
+          }
+          firmaFinder.setValue(""); 
+        }
+      }
+    } else if (filaPlantillaFinder) {
+      // Borrar plantilla solo si no hubo ningún trabajador
+      sheet.deleteRow(filaPlantillaFinder.getRow());
+    }
+
+    // Forzar guardado de la estructura de la tabla antes de seguir
+    SpreadsheetApp.flush(); 
+
+    // ========================================================
+    // 3. LLENADO DE CAMPOS ESTÁTICOS
+    // ========================================================
+    for (var i = 0; i <= 67; i++) {
+      var val = d["col_" + i] || "";
+      
+      if (i == 3) val = formatearFecha(val);
+      if (i == 17 || i == 18) val = formatearHora(val);
+   
+
+      if (i === 62 || i === 66) {
+        var range = sheet.createTextFinder("{{col_" + i + "}}").findNext();
+        if (range) {
+          if (val) insertarImagenEnCelda(sheet, val, range.getColumn(), range.getRow());
+          range.setValue(""); 
+        }
+      } else {
+        sheet.createTextFinder("{{col_" + i + "}}").replaceAllWith(String(val));
+      }
+    }
+
+    // 4. Asentar todas las imágenes
+    SpreadsheetApp.flush(); 
+    Utilities.sleep(3000); // Elevado a 3 segundos para asegurar renderizado perfecto
+    
+    return "https://docs.google.com/spreadsheets/d/" + ssCopia.getId() + "/export?format=pdf&size=letter&portrait=true&fitw=true";
+    
+  } catch (e) { 
+    return "Error al generar PDF: " + e.toString(); 
+  }
+}
+
+// ========================================================
+// FUNCIONES AUXILIARES 
+// ========================================================
+function getPersonalPorId(ss, idBusqueda) {
+  var sheetPersonal = ss.getSheetByName("personal");
+  if (!sheetPersonal) return [];
+  var data = sheetPersonal.getDataRange().getValues();
+  var personalFiltrado = [];
+  
+  for (var i = 1; i < data.length; i++) { 
+    if (String(data[i][0]) === String(idBusqueda)) {
+      personalFiltrado.push({ n: data[i][1], nombre: data[i][2], empresa: data[i][3], identidad: data[i][4], firma: data[i][5] });
+    }
+  }
+  return personalFiltrado;
+}
+
+function insertarImagenEnCelda(sheet, base64Data, col, row) {
+  try {
+    if (base64Data && typeof base64Data === 'string' && base64Data.includes("base64,")) {
+      var bytes = Utilities.base64Decode(base64Data.split("base64,")[1]);
+      var blob = Utilities.newBlob(bytes, "image/png", "firma_" + row + "_" + col + ".png");
+      
+      var imagen = sheet.insertImage(blob, col, row);
+      
+      // 🌟 TRUCO 2: Obtener el tamaño exacto que tiene la celda destino en tu plantilla
+      var altoCelda = sheet.getRowHeight(row) || 45; 
+      var anchoCelda = sheet.getColumnWidth(col) || 100;
+      
+      var anchoOriginal = imagen.getWidth();
+      var altoOriginal = imagen.getHeight();
+      var ratio = anchoOriginal / altoOriginal;
+      
+      // Restamos 4 píxeles (margen) para que la imagen quede 100% contenida y no flote
+      var altoDeseado = altoCelda - 4; 
+      var anchoDeseado = altoDeseado * ratio;
+
+      // Si la imagen calculada es más ancha que la celda, la reducimos en base al ancho
+      if (anchoDeseado > (anchoCelda - 4)) {
+        anchoDeseado = anchoCelda - 4;
+        altoDeseado = anchoDeseado / ratio;
+      }
+      
+      imagen.setHeight(altoDeseado); 
+      imagen.setWidth(anchoDeseado); 
+      
+      imagen.setAnchorCell(sheet.getRange(row, col));
+      imagen.setAnchorCellXOffset(2); // Pegada a la esquina pero respetando el margen
+      imagen.setAnchorCellYOffset(2);
+    }
+  } catch (e) {
+    Logger.log("Error al insertar firma en fila " + row + ": " + e.toString());
+  }
+}
+
+function formatearFecha(val) {
+  if (!val) return "";
+  var fecha = new Date(val);
+  if (isNaN(fecha.getTime())) return val;
+  return Utilities.formatDate(fecha, Session.getScriptTimeZone(), "dd/MM/yyyy");
+}
+
+function formatearHora(val) {
+  if (!val) return "";
+  var fecha = new Date(val);
+  if (isNaN(fecha.getTime())) return val;
+  return Utilities.formatDate(fecha, Session.getScriptTimeZone(), "HH:mm");
+}
