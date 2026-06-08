@@ -130,6 +130,20 @@
       }
     }
 
+    .form-row-2 {
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:15px;
+      grid-column:1 / -1;
+    }
+
+    @media(max-width:480px) {
+      .form-row-2 {
+        grid-template-columns:1fr 1fr;
+        gap:10px;
+      }
+    }
+
     .form-group {
       display:flex;
       flex-direction:column;
@@ -165,6 +179,7 @@
     input[readonly] {
       background:#080f15;
       color:var(--muted-text);
+      opacity:0.85;
     }
 
     .btn-mini {
@@ -268,6 +283,8 @@
       padding:18px;
       width:100%;
       max-width:430px;
+      max-height:85vh;
+      overflow-y:auto;
     }
 
     .modal-actions {
@@ -310,23 +327,57 @@
       <h3><i class="fas fa-clipboard-list"></i> Datos Generales ODT</h3>
 
       <div class="form-grid">
-        <div class="form-group"><label>ID</label><input id="col_0" readonly></div>
-        <div class="form-group"><label>Usuario</label><input id="col_1" readonly></div>
-        <div class="form-group"><label>Sector</label><input id="col_2" readonly></div>
-        <div class="form-group"><label>Estado</label><input id="col_3" readonly></div>
 
-        <div class="form-group"><label>Fecha</label><input type="date" id="col_4"></div>
-        <div class="form-group"><label>Hora llegada</label><input type="time" id="col_5"></div>
-        <div class="form-group"><label>Hora finalizado</label><input type="time" id="col_6"></div>
+        <div class="form-group">
+          <label>ID</label>
+          <input id="col_0" readonly>
+        </div>
+
+        <div class="form-group">
+          <label>Usuario</label>
+          <input id="col_1" readonly>
+        </div>
+
+        <div class="form-group">
+          <label>Sector</label>
+          <input id="col_2" readonly>
+        </div>
+
+        <div class="form-group">
+          <label>Estado</label>
+          <input id="col_3" readonly>
+        </div>
+
+        <div class="form-group">
+          <label>Fecha</label>
+          <input type="date" id="col_4">
+        </div>
+
+        <div class="form-row-2">
+          <div class="form-group">
+            <label>Hora llegada</label>
+            <input type="time" id="col_5">
+          </div>
+
+          <div class="form-group">
+            <label>Hora finalizado</label>
+            <input type="time" id="col_6">
+          </div>
+        </div>
 
         <div class="form-group">
           <label>Razón de Trabajo</label>
           <select id="col_7">
             <option value="">Seleccione...</option>
-            <option value="Incidencia">Incidencia</option>
+            <option value="Incidencia de Zona">Incidencia de Zona</option>
+            <option value="Incidencia Acometida/Medidor">Incidencia Acometida/Medidor</option>
             <option value="Mantenimiento">Mantenimiento</option>
-            <option value="Operaciones">Operaciones</option>
           </select>
+        </div>
+
+        <div class="form-group">
+          <label>Reporte NME</label>
+          <input type="number" id="col_25" placeholder="Ingrese reporte NME">
         </div>
 
         <div class="form-group full-width">
@@ -334,30 +385,39 @@
           <textarea id="col_8" rows="4"></textarea>
         </div>
 
-        <div class="form-group"><label>Pintado Apoyo</label><input type="number" id="col_9"></div>
-        <div class="form-group"><label>Medidor</label><input type="number" id="col_10"></div>
+        <div class="form-group">
+          <label>Pintado Apoyo</label>
+          <input type="number" id="col_9">
+        </div>
+
+        <div class="form-group">
+          <label>Medidor</label>
+          <input type="number" id="col_10">
+        </div>
 
         <div class="form-group">
           <label>GPS</label>
-          <input id="col_11" readonly>
+          <input id="col_11" placeholder="Ej: 14.081800, -87.206800" onchange="convertirGpsManual()">
           <button type="button" class="btn-mini btn-gps" onclick="obtenerGPS()">
             <i class="fas fa-location-dot"></i> Obtener GPS
           </button>
         </div>
 
-        <div class="form-group"><label>UTM</label><input id="col_12"></div>
+        <div class="form-group">
+          <label>UTM</label>
+          <input id="col_12" placeholder="Ej: 16N 477650 1556700" onchange="convertirUtmManual()">
+        </div>
 
         <div class="form-group full-width">
           <button type="button" class="btn-mini" onclick="abrirModal('poste')">
             <i class="fas fa-bolt"></i> Datos Poste
           </button>
+
           <button type="button" class="btn-mini" onclick="abrirModal('transformador')">
             <i class="fas fa-charging-station"></i> Datos Transformador
           </button>
-          <button type="button" class="btn-mini" onclick="abrirModal('control')">
-            <i class="fas fa-sliders"></i> Datos Control
-          </button>
         </div>
+
       </div>
     </div>
 
@@ -479,14 +539,188 @@
 
     navigator.geolocation.getCurrentPosition(
       function(pos) {
-        const lat = pos.coords.latitude.toFixed(6);
-        const lon = pos.coords.longitude.toFixed(6);
-        document.getElementById("col_11").value = lat + ", " + lon;
+        const lat = pos.coords.latitude;
+        const lon = pos.coords.longitude;
+
+        document.getElementById("col_11").value = lat.toFixed(6) + ", " + lon.toFixed(6);
+        document.getElementById("col_12").value = latLonToUTM(lat, lon);
       },
-      function() {
-        alert("No se pudo obtener la ubicación.");
+      function(error) {
+        alert("No se pudo obtener la ubicación exacta. Active permisos de ubicación y GPS.");
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 15000,
+        maximumAge: 0
       }
     );
+  }
+
+  function convertirGpsManual() {
+    const valor = document.getElementById("col_11").value.trim();
+
+    if (!valor) {
+      document.getElementById("col_12").value = "";
+      return;
+    }
+
+    const partes = valor.split(",");
+
+    if (partes.length !== 2) {
+      alert("Formato GPS incorrecto. Use: latitud, longitud");
+      document.getElementById("col_12").value = "";
+      return;
+    }
+
+    const lat = parseFloat(partes[0]);
+    const lon = parseFloat(partes[1]);
+
+    if (isNaN(lat) || isNaN(lon) || lat < -90 || lat > 90 || lon < -180 || lon > 180) {
+      alert("Coordenadas GPS inválidas.");
+      document.getElementById("col_12").value = "";
+      return;
+    }
+
+    document.getElementById("col_12").value = latLonToUTM(lat, lon);
+  }
+
+  function convertirUtmManual() {
+    const valor = document.getElementById("col_12").value.trim().toUpperCase();
+
+    if (!valor) {
+      document.getElementById("col_11").value = "";
+      return;
+    }
+
+    const partes = valor.split(/\s+/);
+
+    if (partes.length !== 3) {
+      alert("Formato UTM incorrecto. Use: 16N Este Norte");
+      document.getElementById("col_11").value = "";
+      return;
+    }
+
+    const zona = partes[0];
+    const este = parseFloat(partes[1]);
+    const norte = parseFloat(partes[2]);
+
+    if (!/^\d{1,2}[NS]$/.test(zona) || isNaN(este) || isNaN(norte)) {
+      alert("UTM inválido. Ejemplo correcto: 16N 477650 1556700");
+      document.getElementById("col_11").value = "";
+      return;
+    }
+
+    const resultado = utmToLatLon(zona, este, norte);
+
+    document.getElementById("col_11").value = resultado.lat.toFixed(6) + ", " + resultado.lon.toFixed(6);
+  }
+
+  function latLonToUTM(lat, lon) {
+    const a = 6378137;
+    const f = 1 / 298.257223563;
+    const k0 = 0.9996;
+
+    const e = Math.sqrt(f * (2 - f));
+    const zone = Math.floor((lon + 180) / 6) + 1;
+    const lon0 = ((zone - 1) * 6 - 180 + 3) * Math.PI / 180;
+
+    const latRad = lat * Math.PI / 180;
+    const lonRad = lon * Math.PI / 180;
+
+    const e2 = e * e;
+    const ep2 = e2 / (1 - e2);
+
+    const N = a / Math.sqrt(1 - e2 * Math.sin(latRad) ** 2);
+    const T = Math.tan(latRad) ** 2;
+    const C = ep2 * Math.cos(latRad) ** 2;
+    const A = Math.cos(latRad) * (lonRad - lon0);
+
+    const M = a * (
+      (1 - e2 / 4 - 3 * e2 ** 2 / 64 - 5 * e2 ** 3 / 256) * latRad
+      - (3 * e2 / 8 + 3 * e2 ** 2 / 32 + 45 * e2 ** 3 / 1024) * Math.sin(2 * latRad)
+      + (15 * e2 ** 2 / 256 + 45 * e2 ** 3 / 1024) * Math.sin(4 * latRad)
+      - (35 * e2 ** 3 / 3072) * Math.sin(6 * latRad)
+    );
+
+    let easting = k0 * N * (
+      A + (1 - T + C) * A ** 3 / 6
+      + (5 - 18 * T + T ** 2 + 72 * C - 58 * ep2) * A ** 5 / 120
+    ) + 500000;
+
+    let northing = k0 * (
+      M + N * Math.tan(latRad) * (
+        A ** 2 / 2
+        + (5 - T + 9 * C + 4 * C ** 2) * A ** 4 / 24
+        + (61 - 58 * T + T ** 2 + 600 * C - 330 * ep2) * A ** 6 / 720
+      )
+    );
+
+    const hemisferio = lat >= 0 ? "N" : "S";
+
+    if (lat < 0) {
+      northing += 10000000;
+    }
+
+    return zone + hemisferio + " " + Math.round(easting) + " " + Math.round(northing);
+  }
+
+  function utmToLatLon(zona, easting, northing) {
+    const a = 6378137;
+    const f = 1 / 298.257223563;
+    const k0 = 0.9996;
+
+    const zoneNumber = parseInt(zona);
+    const hemisphere = zona.slice(-1);
+
+    const e = Math.sqrt(f * (2 - f));
+    const e1sq = e * e / (1 - e * e);
+
+    let x = easting - 500000;
+    let y = northing;
+
+    if (hemisphere === "S") {
+      y -= 10000000;
+    }
+
+    const lonOrigin = (zoneNumber - 1) * 6 - 180 + 3;
+
+    const M = y / k0;
+    const mu = M / (a * (1 - e ** 2 / 4 - 3 * e ** 4 / 64 - 5 * e ** 6 / 256));
+
+    const e1 = (1 - Math.sqrt(1 - e ** 2)) / (1 + Math.sqrt(1 - e ** 2));
+
+    const J1 = 3 * e1 / 2 - 27 * e1 ** 3 / 32;
+    const J2 = 21 * e1 ** 2 / 16 - 55 * e1 ** 4 / 32;
+    const J3 = 151 * e1 ** 3 / 96;
+    const J4 = 1097 * e1 ** 4 / 512;
+
+    const fp = mu
+      + J1 * Math.sin(2 * mu)
+      + J2 * Math.sin(4 * mu)
+      + J3 * Math.sin(6 * mu)
+      + J4 * Math.sin(8 * mu);
+
+    const C1 = e1sq * Math.cos(fp) ** 2;
+    const T1 = Math.tan(fp) ** 2;
+    const N1 = a / Math.sqrt(1 - e ** 2 * Math.sin(fp) ** 2);
+    const R1 = a * (1 - e ** 2) / Math.pow(1 - e ** 2 * Math.sin(fp) ** 2, 1.5);
+    const D = x / (N1 * k0);
+
+    const lat = fp - (N1 * Math.tan(fp) / R1) * (
+      D ** 2 / 2
+      - (5 + 3 * T1 + 10 * C1 - 4 * C1 ** 2 - 9 * e1sq) * D ** 4 / 24
+      + (61 + 90 * T1 + 298 * C1 + 45 * T1 ** 2 - 252 * e1sq - 3 * C1 ** 2) * D ** 6 / 720
+    );
+
+    const lon = (D
+      - (1 + 2 * T1 + C1) * D ** 3 / 6
+      + (5 - 2 * C1 + 28 * T1 - 3 * C1 ** 2 + 8 * e1sq + 24 * T1 ** 2) * D ** 5 / 120
+    ) / Math.cos(fp);
+
+    return {
+      lat: lat * 180 / Math.PI,
+      lon: lonOrigin + lon * 180 / Math.PI
+    };
   }
 
   function abrirModal(tipo) {
@@ -517,25 +751,12 @@
       `;
     }
 
-    if (tipo === "control") {
-      titulo.innerHTML = '<i class="fas fa-sliders"></i> Datos Control';
-      contenido.innerHTML = `
-        ${campoModal("Reporte Energis", "col_25", "number")}
-        ${campoModal("ODT Padre", "col_26", "number")}
-        ${campoModal("Hija", "col_27", "number")}
-        ${campoModal("Evento", "col_28", "number")}
-        ${campoModal("Actividad", "col_29", "number")}
-        ${campoModal("Requisa", "col_30", "number")}
-        ${campoModal("ID Traslado", "col_31", "number")}
-        ${campoModal("Gestionado Por", "col_32")}
-      `;
-    }
-
     document.getElementById("modalBg").style.display = "flex";
   }
 
   function campoModal(label, id, type = "text") {
     const valor = document.getElementById(id) ? document.getElementById(id).value : "";
+
     return `
       <div class="form-group" style="margin-bottom:12px;">
         <label>${label}</label>
@@ -555,6 +776,7 @@
 
     const div = document.createElement("div");
     div.className = "material-card";
+
     div.innerHTML = `
       <div class="form-grid">
         <div class="form-group">
@@ -574,6 +796,7 @@
           <input type="number" class="cantidad-material">
         </div>
       </div>
+
       <button type="button" class="btn-delete" onclick="this.parentElement.remove()">
         <i class="fas fa-trash"></i> Eliminar
       </button>
@@ -610,8 +833,11 @@
 
   async function guardarODT() {
     const btn = document.getElementById("btnGuardar");
+
     btn.disabled = true;
     btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Guardando...';
+
+    convertirGpsManual();
 
     const odt = {};
 
