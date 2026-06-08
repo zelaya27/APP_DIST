@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>APP DIST - Menú</title>
+
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+
+  <style>
+    :root {
+      --bg-color: #0b141d;
+      --card-color: #14212d;
+      --accent-color: #003366;
+      --success-color: #27ae60;
+      --danger-color: #e74c3c;
+      --text-color: #ffffff;
+      --muted-text: #a0aec0;
+      --border-color: #2c3e50;
+      --blue-active: #3b82f6;
+      --blue-hover: #2b6cb0;
+    }
+
+    body {
+      font-family: 'Segoe UI', Arial, sans-serif;
+      background-color: var(--bg-color);
+      color: var(--text-color);
+      margin: 0;
+      padding: 0;
+      min-height: 100vh;
+    }
+
+    header {
+      background-color: var(--card-color);
+      padding: 20px 15px 15px 15px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .logo-box {
+      background: white;
+      padding: 6px 12px;
+      border-radius: 6px;
+      display: inline-block;
+    }
+
+    .logo-box img {
+      height: 45px;
+      display: block;
+    }
+
+    .app-title {
+      margin: 0;
+      color: #ffffff;
+      font-size: 22px;
+      font-weight: bold;
+      letter-spacing: 2px;
+    }
+
+    .user-info {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      flex-wrap: wrap;
+      justify-content: center;
+      background-color: rgba(0, 0, 0, 0.2);
+      padding: 8px 15px;
+      border-radius: 20px;
+    }
+
+    .info-item {
+      font-size: 13px;
+      color: var(--text-color);
+    }
+
+    .info-item span {
+      color: var(--blue-active);
+      font-weight: bold;
+    }
+
+    .btn-logout {
+      background-color: transparent;
+      color: var(--danger-color);
+      border: 1px solid var(--danger-color);
+      padding: 5px 12px;
+      border-radius: 15px;
+      cursor: pointer;
+      font-size: 12px;
+      transition: all 0.2s ease;
+    }
+
+    .btn-logout:hover {
+      background-color: var(--danger-color);
+      color: white;
+    }
+
+    .container {
+      max-width: 1000px;
+      margin: 30px auto;
+      padding: 15px;
+    }
+
+    .menu-title {
+      text-align: center;
+      color: var(--muted-text);
+      font-size: 15px;
+      margin-bottom: 25px;
+    }
+
+    .menu-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 18px;
+    }
+
+    @media (min-width: 700px) {
+      .menu-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
+    .menu-card {
+      background-color: #1a2a3a;
+      border: 1px solid var(--border-color);
+      border-radius: 14px;
+      padding: 25px 20px;
+      cursor: pointer;
+      text-align: center;
+      transition: all 0.25s ease;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.25);
+    }
+
+    .menu-card:hover {
+      border-color: var(--blue-active);
+      transform: translateY(-3px);
+      box-shadow: 0 0 12px rgba(59, 130, 246, 0.35);
+    }
+
+    .menu-icon {
+      width: 70px;
+      height: 70px;
+      border-radius: 50%;
+      background-color: rgba(59, 130, 246, 0.12);
+      color: var(--blue-active);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 15px auto;
+      font-size: 30px;
+      border: 1px solid rgba(59, 130, 246, 0.4);
+    }
+
+    .menu-card h3 {
+      margin: 0 0 8px 0;
+      font-size: 20px;
+      color: white;
+    }
+
+    .menu-card p {
+      margin: 0;
+      font-size: 14px;
+      color: var(--muted-text);
+      line-height: 1.4;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+  </style>
+</head>
+
+<body>
+
+  <header>
+    <div class="logo-box">
+      <img src="https://raw.githubusercontent.com/zelaya27/IMAGENES_AZ/main/UTCD%20Vertical.png" alt="Logo UTCD">
+    </div>
+
+    <h1 class="app-title">APP DIST</h1>
+
+    <div class="user-info">
+      <span class="info-item">
+        <i class="fas fa-user-circle"></i>
+        <span id="nombre-usuario">Usuario</span>
+      </span>
+
+      <span style="color: var(--border-color);">|</span>
+
+      <span class="info-item">
+        <i class="fas fa-map-marker-alt"></i>
+        <span id="nombre-sector">Sector</span>
+      </span>
+
+      <span style="color: var(--border-color);">|</span>
+
+      <button class="btn-logout" onclick="cerrarSesion()">
+        <i class="fas fa-sign-out-alt"></i> Salir
+      </button>
+    </div>
+  </header>
+
+  <div class="container">
+    <div class="menu-title">
+      Seleccione una opción para continuar
+    </div>
+
+    <div class="menu-grid">
+
+      <div class="menu-card" onclick="abrirPantalla('odt.html')">
+        <div class="menu-icon">
+          <i class="fas fa-hard-hat"></i>
+        </div>
+        <h3>ODT</h3>
+        <p>Registro móvil de órdenes de trabajo.</p>
+      </div>
+
+      <div class="menu-card hidden" id="card-panel-odt" onclick="abrirPantalla('panelodt.html')">
+        <div class="menu-icon">
+          <i class="fas fa-desktop"></i>
+        </div>
+        <h3>PANEL ODT</h3>
+        <p>Panel de control, revisión y administración de ODT.</p>
+      </div>
+
+    </div>
+  </div>
+
+  <script>
+    document.addEventListener("DOMContentLoaded", function() {
+      const usuario = sessionStorage.getItem("usuario");
+      const tipoUsuario = sessionStorage.getItem("tipo_usuario");
+      const sector = sessionStorage.getItem("sector");
+
+      if (!usuario) {
+        window.location.href = "index.html";
+        return;
+      }
+
+      document.getElementById("nombre-usuario").innerText = usuario || "Usuario";
+      document.getElementById("nombre-sector").innerText = sector || "Sector";
+
+      if (String(tipoUsuario) === "1") {
+        document.getElementById("card-panel-odt").classList.remove("hidden");
+      }
+    });
+
+    function abrirPantalla(url) {
+      window.location.href = url;
+    }
+
+    function cerrarSesion() {
+      sessionStorage.clear();
+      window.location.href = "index.html";
+    }
+  </script>
+
+</body>
+</html>
