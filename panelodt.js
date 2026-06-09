@@ -49,7 +49,7 @@ function cerrarSesion() {
 
 async function cargarPanelODT() {
   const tbody = document.getElementById("tablaODT");
-  tbody.innerHTML = '<tr><td colspan="6" class="mensaje-tabla"><i class="fas fa-spinner fa-spin"></i> Cargando ODT...</td></tr>';
+  tbody.innerHTML = '<tr><td colspan="7" class="mensaje-tabla"><i class="fas fa-spinner fa-spin"></i> Cargando ODT...</td></tr>';
 
   try {
     const response = await fetch(CONFIG.URL_APPS_SCRIPT, {
@@ -75,7 +75,7 @@ async function cargarPanelODT() {
 
   } catch (error) {
     console.error(error);
-    tbody.innerHTML = '<tr><td colspan="6" class="mensaje-tabla mensaje-error"><i class="fas fa-exclamation-triangle"></i> Error cargando Panel ODT: ' + escaparHTML(error.message) + '</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="7" class="mensaje-tabla mensaje-error"><i class="fas fa-exclamation-triangle"></i> Error cargando Panel ODT: ' + escaparHTML(error.message) + '</td></tr>';
   }
 }
 
@@ -128,6 +128,7 @@ function obtenerDatosFiltrados() {
   const fechaDesde = document.getElementById("fechaDesde").value;
   const fechaHasta = document.getElementById("fechaHasta").value;
   const texto = normalizarTexto(document.getElementById("buscadorTexto").value || "");
+  const reporteBuscado = String(document.getElementById("buscadorReporte") ? document.getElementById("buscadorReporte").value : "").trim();
 
   let datos = registrosPanel.slice();
 
@@ -146,6 +147,11 @@ function obtenerDatosFiltrados() {
       if (!idODT.includes(texto)) return false;
     }
 
+    if (reporteBuscado) {
+      const reporteFila = String(row.col_26 || "").trim();
+      if (!reporteFila.includes(reporteBuscado)) return false;
+    }
+
     return true;
   });
 
@@ -156,6 +162,7 @@ function renderizarTabla() {
   const tbody = document.getElementById("tablaODT");
   const limitSelector = document.getElementById("limitSelector");
   const odtBuscada = String(document.getElementById("buscadorTexto").value || "").trim();
+  const reporteBuscado = String(document.getElementById("buscadorReporte") ? document.getElementById("buscadorReporte").value : "").trim();
 
   let datos = obtenerDatosFiltrados();
 
@@ -170,11 +177,15 @@ function renderizarTabla() {
   tbody.innerHTML = "";
 
   if (datos.length === 0) {
-    const mensaje = odtBuscada
-      ? "No se encontró la ODT."
-      : "No hay ODT para mostrar con los filtros seleccionados.";
+    let mensaje = "No hay ODT para mostrar con los filtros seleccionados.";
 
-    tbody.innerHTML = '<tr><td colspan="6" class="mensaje-tabla">' + escaparHTML(mensaje) + '</td></tr>';
+    if (reporteBuscado) {
+      mensaje = "No se encontró el reporte.";
+    } else if (odtBuscada) {
+      mensaje = "No se encontró la ODT.";
+    }
+
+    tbody.innerHTML = '<tr><td colspan="7" class="mensaje-tabla">' + escaparHTML(mensaje) + '</td></tr>';
     return;
   }
 
@@ -189,14 +200,16 @@ function renderizarTabla() {
       <td class="col-fecha">${escaparHTML(row.col_5 || "")}</td>
       <td class="col-cuadrilla">${escaparHTML(row.col_4 || "")}</td>
       <td class="col-razon">${escaparHTML(row.col_8 || "")}</td>
+      <td class="col-reporte">${escaparHTML(row.col_26 || "")}</td>
       <td class="col-acciones">
         <div class="acciones-td">
-          <button class="btn-icon btn-controles" title="Datos de control" onclick="abrirControles('${escaparAtributo(id)}')">
-            <i class="fas fa-sliders"></i>
+          <button class="btn-icon btn-controles btn-control-grande" title="Datos de control" onclick="abrirControles('${escaparAtributo(id)}')">
+            <i class="fas fa-sliders"></i> Control
           </button>
           <button class="btn-icon btn-pdf" title="Ver PDF" onclick="verPDF('${escaparAtributo(id)}')">
             <i class="fas fa-file-pdf"></i>
           </button>
+          ${crearBotonEditar(row)}
           <button class="btn-icon btn-auditar" title="Auditar" onclick="abrirAuditoria('${escaparAtributo(id)}')">
             <i class="fas fa-magnifying-glass"></i>
           </button>
@@ -250,6 +263,7 @@ function limpiarFiltros() {
   document.getElementById("fechaDesde").value = "";
   document.getElementById("fechaHasta").value = "";
   document.getElementById("buscadorTexto").value = "";
+  if (document.getElementById("buscadorReporte")) document.getElementById("buscadorReporte").value = "";
   renderizarTabla();
 }
 
@@ -308,6 +322,49 @@ async function cambiarEstadoDesdeTabla(idODT, select) {
     select.value = estadoAnterior;
     select.disabled = false;
   }
+}
+
+// =====================================================
+// EDICIÓN Y FILTRO DE REPORTE
+// =====================================================
+
+function crearBotonEditar(row) {
+  const id = escaparAtributo(row.col_0 || "");
+  const estado = normalizarTexto(row.col_3 || "Pendiente");
+
+  if (estado === "PENDIENTE") {
+    return `
+      <button class="btn-icon btn-editar" title="Editar ODT" onclick="editarODT('${id}')">
+        <i class="fas fa-pen"></i>
+      </button>
+    `;
+  }
+
+  return `
+    <button class="btn-icon btn-editar-bloqueado" title="Solo se puede editar en estado Pendiente" onclick="alert('Esta ODT no puede editarse porque no está en estado Pendiente.')">
+      <i class="fas fa-lock"></i>
+    </button>
+  `;
+}
+
+function editarODT(idODT) {
+  const registro = buscarRegistro(idODT);
+
+  if (!registro) {
+    alert("No se encontró la ODT seleccionada.");
+    return;
+  }
+
+  if (normalizarTexto(registro.col_3 || "") !== "PENDIENTE") {
+    alert("Esta ODT no puede editarse porque no está en estado Pendiente.");
+    return;
+  }
+
+  window.location.href = "odt.html?id=" + encodeURIComponent(idODT) + "&modo=editar";
+}
+
+function filtrarSoloNumerosReporte(input) {
+  input.value = String(input.value || "").replace(/\D/g, "");
 }
 
 // =====================================================
