@@ -7,9 +7,7 @@
 
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
   <link rel="stylesheet" href="odt.css">
-  <script src="gps-utm.js"></script>
-  <script src="odt.js"></script>
-  <script src="materiales.js"></script>
+
   <script src="config.js"></script>
 </head>
 
@@ -189,6 +187,67 @@
   </div>
 </div>
 
+<div class="modal-bg" id="modalMaterialBg">
+  <div class="modal">
+    <h3 id="tituloModalMaterial">
+      <i class="fas fa-box"></i> Agregar Material
+    </h3>
 
+    <div class="form-group">
+      <label>Categoría</label>
+      <select id="mat_categoria" onchange="filtrarMaterialesPorCategoria()">
+        <option value="">Todas</option>
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label>Nombre Material</label>
+      <input id="mat_nombre" list="lista_nombres_materiales" onchange="seleccionarMaterialPorNombre()">
+      <datalist id="lista_nombres_materiales"></datalist>
+    </div>
+
+    <div class="form-group">
+      <label>Código Material</label>
+      <input id="mat_codigo" list="lista_codigos_materiales" onchange="seleccionarMaterialPorCodigo()">
+      <datalist id="lista_codigos_materiales"></datalist>
+    </div>
+
+    <div class="form-group">
+      <label>Unidad</label>
+      <input id="mat_unidad" readonly>
+    </div>
+
+    <div class="form-group">
+      <label>Existencia actual</label>
+      <input id="mat_existencia" readonly>
+    </div>
+
+    <div class="form-group">
+      <label>Cantidad a consumir</label>
+      <input type="number" id="mat_cantidad">
+    </div>
+
+    <div class="form-group">
+      <label>Observaciones</label>
+      <textarea id="mat_observaciones" rows="2" readonly></textarea>
+    </div>
+
+    <div class="form-group">
+      <label>Imagen</label>
+      <div id="mat_imagen_box" style="background:#0b141d;border:1px solid #2c3e50;border-radius:8px;padding:10px;text-align:center;">
+        Sin imagen disponible
+      </div>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn-wizard btn-back" type="button" onclick="cerrarModalMaterial()">Cancelar</button>
+      <button class="btn-wizard btn-save" type="button" onclick="agregarMaterialDesdeModal()">Agregar</button>
+    </div>
+  </div>
+</div>
+  
+<script src="gps-utm.js"></script>
+<script src="materiales.js"></script>
+<script src="odt.js"></script>
 </body>
 </html>
