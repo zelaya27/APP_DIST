@@ -7,7 +7,9 @@
 
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
   <link rel="stylesheet" href="odt.css">
-
+  <script src="gps-utm.js"></script>
+  <script src="odt.js"></script>
+  <script src="materiales.js"></script>
   <script src="config.js"></script>
 </head>
 
@@ -151,7 +153,7 @@
 
       <div id="listaCuadrilla"></div>
 
-      <button type="button" class="btn-add" onclick="agregarMaterial('cuadrilla')">
+ <button type="button" class="btn-add" onclick="abrirModalMaterial('cuadrilla')">
         <i class="fas fa-plus"></i> Agregar Material Cuadrilla
       </button>
     </div>
@@ -161,7 +163,7 @@
 
       <div id="listaSupervisor"></div>
 
-      <button type="button" class="btn-add" onclick="agregarMaterial('supervisor')">
+      <button type="button" class="btn-add" onclick="abrirModalMaterial('supervisor')">
         <i class="fas fa-plus"></i> Agregar Material Supervisor
       </button>
     </div>
@@ -187,8 +189,6 @@
   </div>
 </div>
 
-<script src="gps-utm.js"></script>
-<script src="odt.js"></script>
 
 </body>
 </html>
