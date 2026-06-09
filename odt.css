@@ -375,12 +375,13 @@ input[readonly] {
 .selector-item {
   color:#111827;
   background:#ffffff;
-  padding:15px 14px;
-  font-size:16px;
+  padding:9px 10px;
+  font-size:12px;
   font-weight:700;
   border-bottom:1px solid #e5e7eb;
   cursor:pointer;
-  min-height:24px;
+  min-height:18px;
+  line-height:1.25;
 }
 
 .selector-item:last-child {
@@ -392,6 +393,13 @@ input[readonly] {
 .selector-item.activo {
   background:#2563eb;
   color:#ffffff;
+}
+
+.selector-item-simple {
+  font-size:15px;
+  padding:14px 13px;
+  text-align:center;
+  letter-spacing:.3px;
 }
 
 .selector-empty {
