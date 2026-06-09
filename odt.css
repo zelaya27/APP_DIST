@@ -358,3 +358,28 @@ input[readonly] {
   cursor:pointer;
   padding:4px;
 }
+
+
+/* =========================================
+   INDICADOR VISUAL DE EXISTENCIA
+========================================= */
+
+.stock-positivo {
+  background:#16a34a !important;
+  color:#ffffff !important;
+  border-color:#22c55e !important;
+  font-weight:bold;
+}
+
+.stock-cero-negativo {
+  background:#dc2626 !important;
+  color:#ffffff !important;
+  border-color:#ff1f1f !important;
+  font-weight:bold;
+  box-shadow:0 0 8px rgba(255, 31, 31, 0.65);
+}
+
+.modal-actions-material {
+  margin-top:4px;
+  margin-bottom:15px;
+}
