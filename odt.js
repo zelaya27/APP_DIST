@@ -9,6 +9,8 @@ let formularioSucio = false;
 let guardadoCorrecto = false;
 let idODTGuardada = "";
 let urlPDFGenerado = "";
+let modoEdicionODT = false;
+let idEdicionODT = "";
 
 const razonesTrabajoBD = [
   "INCIDENCIAS",
@@ -31,14 +33,20 @@ document.addEventListener("DOMContentLoaded", function() {
     return;
   }
 
-  document.getElementById("col_0").value = generarID();
+  const params = new URLSearchParams(window.location.search);
+  modoEdicionODT = params.get("modo") === "editar" && !!params.get("id");
+  idEdicionODT = params.get("id") || "";
+
+  document.getElementById("col_0").value = modoEdicionODT ? idEdicionODT : generarID();
   document.getElementById("col_1").value = usuario;
   document.getElementById("col_2").value = sector;
   document.getElementById("col_3").value = "Pendiente";
   document.getElementById("col_5").value = fechaHoy();
 
-  cargarCuadrillas();
-  cargarDatosMateriales();
+  Promise.all([cargarCuadrillas(), cargarDatosMateriales()]).then(function() {
+    if (modoEdicionODT) cargarODTParaEditar(idEdicionODT);
+  });
+
   activarProteccionSalida();
   actualizarBotones();
 });
@@ -68,11 +76,87 @@ function volverMenuSeguro() {
     const salir = confirm("Tiene datos sin guardar.\n\n¿Desea salir y perder la información capturada?");
     if (!salir) return;
   }
-  window.location.href = "menu.html";
+  window.location.href = modoEdicionODT ? "listaodt.html" : "menu.html";
 }
 
 function marcarFormularioSucio() {
   formularioSucio = true;
+}
+
+
+// =====================================================
+// CARGAR ODT EXISTENTE PARA EDICIÓN
+// =====================================================
+
+async function cargarODTParaEditar(idODT) {
+  try {
+    const response = await fetch(CONFIG.URL_APPS_SCRIPT, {
+      method: "POST",
+      mode: "cors",
+      body: JSON.stringify({
+        action: "obtenerODTPorId",
+        idODT: idODT
+      })
+    });
+
+    const data = await response.json();
+
+    if (data.status !== "Éxito") {
+      alert("No se pudo cargar la ODT para editar: " + (data.message || "Error desconocido"));
+      window.location.href = "listaodt.html";
+      return;
+    }
+
+    const odt = data.odt || {};
+    const estado = String(odt.col_3 || "").trim().toUpperCase();
+
+    if (estado && estado !== "PENDIENTE") {
+      alert("Esta ODT no se puede editar porque su estado es " + odt.col_3 + ".");
+      window.location.href = "listaodt.html";
+      return;
+    }
+
+    for (let i = 0; i <= 35; i++) {
+      const campo = document.getElementById("col_" + i);
+      const valor = odt["col_" + i] || "";
+
+      if (campo) {
+        campo.value = valor;
+      } else if (i >= 14 && i <= 25) {
+        datosModalODT["col_" + i] = valor;
+      }
+    }
+
+    cuadrillaAnterior = document.getElementById("col_4") ? document.getElementById("col_4").value : "";
+    numeroCuadrillaAnterior = document.getElementById("col_34") ? document.getElementById("col_34").value : "";
+
+    if (data.consumo_cuadrilla && data.consumo_cuadrilla.length > 0) {
+      data.consumo_cuadrilla.forEach(function(m) {
+        agregarMaterialATabla("cuadrilla", m);
+      });
+    }
+
+    if (data.consumo_supervisor && data.consumo_supervisor.length > 0) {
+      data.consumo_supervisor.forEach(function(m) {
+        agregarMaterialATabla("supervisor", m);
+      });
+    }
+
+    const titulo = document.querySelector("header h2");
+    if (titulo) titulo.textContent = "EDITAR ODT";
+
+    idODTGuardada = idODT;
+    urlPDFGenerado = odt.col_35 || "";
+    formularioSucio = false;
+    guardadoCorrecto = false;
+
+    await cargarStockContexto("cuadrilla");
+
+  } catch (error) {
+    console.error(error);
+    alert("Error de conexión cargando ODT para editar.");
+    window.location.href = "listaodt.html";
+  }
 }
 
 // =====================================================
