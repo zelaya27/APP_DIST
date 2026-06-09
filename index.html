@@ -225,6 +225,7 @@
           sessionStorage.setItem("tipo_usuario", data.tipo_usuario);
           sessionStorage.setItem("sector", data.sector);
           sessionStorage.setItem("cuadrilla", data.cuadrilla || "");
+          sessionStorage.setItem("numero_cuadrilla", data.numero_cuadrilla || data.cuadrilla || "");
 
           window.location.href = "menu.html";
         } else {
