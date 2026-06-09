@@ -1,0 +1,631 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+  <title>Lista ODT - APP DIST</title>
+
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+  <script src="config.js"></script>
+
+  <style>
+    :root {
+      --bg-color:#101a24;
+      --card-color:#172636;
+      --accent-color:#0b3a66;
+      --success-color:#27ae60;
+      --danger-color:#e74c3c;
+      --text-color:#ffffff;
+      --muted-text:#d8e2ee;
+      --border-color:#3f5870;
+      --blue-active:#60a5fa;
+      --input-bg:#0d1720;
+    }
+
+    body {
+      font-family:'Segoe UI', Arial, sans-serif;
+      background:var(--bg-color);
+      color:var(--text-color);
+      margin:0;
+      padding:0;
+      min-height:100vh;
+      overflow-x:hidden;
+    }
+
+    header {
+      background:var(--card-color);
+      padding:16px 15px 14px;
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      gap:11px;
+      border-bottom:1px solid var(--border-color);
+      position:sticky;
+      top:0;
+      z-index:30;
+    }
+
+    .header-title-row {
+      width:100%;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+    }
+
+    .btn-back-header {
+      background:rgba(231, 76, 60, 0.18);
+      color:#ff8a8a;
+      border:1px solid #ff6b6b;
+      padding:8px 13px;
+      border-radius:8px;
+      cursor:pointer;
+      font-weight:900;
+    }
+
+    .app-title {
+      margin:0;
+      color:#ffffff;
+      font-size:20px;
+      font-weight:900;
+      letter-spacing:1.5px;
+      text-align:center;
+      flex:1;
+    }
+
+    .logo-mini {
+      background:white;
+      padding:4px 8px;
+      border-radius:6px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      min-width:44px;
+    }
+
+    .logo-mini img {
+      height:30px;
+      display:block;
+    }
+
+    .user-info {
+      display:flex;
+      gap:10px;
+      align-items:center;
+      flex-wrap:wrap;
+      justify-content:center;
+      background:rgba(0,0,0,.22);
+      padding:8px 13px;
+      border-radius:20px;
+      border:1px solid rgba(255,255,255,.04);
+    }
+
+    .info-item {
+      font-size:13px;
+      color:#ffffff;
+    }
+
+    .info-item span {
+      color:var(--blue-active);
+      font-weight:900;
+    }
+
+    .btn-logout {
+      background:transparent;
+      color:#ff6b6b;
+      border:1px solid #ff6b6b;
+      padding:5px 11px;
+      border-radius:15px;
+      cursor:pointer;
+      font-size:12px;
+      font-weight:800;
+    }
+
+    .container {
+      max-width:1100px;
+      margin:18px auto;
+      padding:15px;
+      padding-bottom:35px;
+    }
+
+    .panel-controles {
+      display:flex;
+      flex-direction:column;
+      gap:15px;
+      margin-bottom:18px;
+    }
+
+    .search-box {
+      display:flex;
+      align-items:center;
+      gap:8px;
+      background:#ffffff;
+      border:2px solid var(--blue-active);
+      border-radius:10px;
+      padding:0 12px;
+      box-shadow:0 0 10px rgba(96,165,250,.24);
+    }
+
+    .search-box i { color:#111827; }
+
+    .search-box input {
+      width:100%;
+      background:#ffffff;
+      color:#111827;
+      border:none;
+      padding:14px 4px;
+      font-size:16px;
+      font-weight:800;
+      outline:none;
+      box-sizing:border-box;
+    }
+
+    .filtros-flex {
+      display:flex;
+      gap:9px;
+      width:100%;
+      justify-content:flex-start;
+      overflow-x:auto;
+      padding-bottom:4px;
+    }
+
+    .filtros-flex::-webkit-scrollbar { display:none; }
+    .filtros-flex { -ms-overflow-style:none; scrollbar-width:none; }
+
+    .btn-filtro {
+      background:#1a2a3a;
+      color:#d8e2ee;
+      border:1px solid var(--border-color);
+      padding:9px 14px;
+      border-radius:20px;
+      cursor:pointer;
+      font-weight:800;
+      font-size:13px;
+      display:flex;
+      align-items:center;
+      gap:6px;
+      white-space:nowrap;
+    }
+
+    .btn-filtro.activo {
+      background:var(--blue-active);
+      color:#05111f;
+      border-color:#93c5fd;
+      box-shadow:0 0 12px rgba(96,165,250,.55);
+    }
+
+    .mostrar-contenedor {
+      display:flex;
+      justify-content:center;
+      color:#ffffff;
+      font-size:14px;
+    }
+
+    .mostrar-grupo {
+      display:flex;
+      align-items:center;
+      gap:10px;
+      flex-wrap:wrap;
+      justify-content:center;
+    }
+
+    .input-filtro {
+      background:#16283a;
+      color:#ffffff;
+      border:1px solid var(--border-color);
+      padding:9px 14px;
+      border-radius:8px;
+      outline:none;
+      font-size:14px;
+      font-weight:800;
+      cursor:pointer;
+    }
+
+    .registros-grid {
+      display:grid;
+      grid-template-columns:1fr;
+      gap:15px;
+      margin-top:10px;
+    }
+
+    @media(min-width:768px) {
+      .registros-grid { grid-template-columns:repeat(2,1fr); }
+    }
+
+    @media(min-width:1024px) {
+      .registros-grid { grid-template-columns:repeat(3,1fr); }
+    }
+
+    .registro-card {
+      background:#1a2a3a;
+      border:1px solid var(--border-color);
+      border-radius:12px;
+      padding:15px;
+      display:flex;
+      flex-direction:column;
+      gap:11px;
+      box-shadow:0 4px 8px rgba(0,0,0,.24);
+    }
+
+    .registro-header {
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:10px;
+      border-bottom:1px solid var(--border-color);
+      padding-bottom:10px;
+    }
+
+    .registro-id {
+      font-weight:900;
+      color:#ffffff;
+      font-size:16px;
+      word-break:break-word;
+    }
+
+    .registro-id i,
+    .registro-body i,
+    .btn-card i {
+      color:var(--blue-active);
+    }
+
+    .registro-body p {
+      margin:7px 0;
+      font-size:14px;
+      color:#d8e2ee;
+      display:flex;
+      align-items:center;
+      gap:10px;
+      line-height:1.3;
+    }
+
+    .registro-body b {
+      color:#ffffff;
+    }
+
+    .registro-body i {
+      width:17px;
+      text-align:center;
+      font-size:15px;
+    }
+
+    .registro-footer {
+      display:flex;
+      justify-content:flex-end;
+      gap:8px;
+      flex-wrap:wrap;
+      margin-top:4px;
+    }
+
+    .btn-card {
+      background:transparent;
+      color:var(--blue-active);
+      border:1px solid var(--blue-active);
+      padding:7px 14px;
+      border-radius:20px;
+      cursor:pointer;
+      font-weight:900;
+      transition:all .2s ease;
+      display:flex;
+      align-items:center;
+      gap:7px;
+      min-height:36px;
+    }
+
+    .btn-card:hover,
+    .btn-card:active {
+      background:var(--blue-active);
+      color:#05111f;
+      box-shadow:0 0 10px rgba(96,165,250,.45);
+    }
+
+    .btn-card:hover i,
+    .btn-card:active i { color:#05111f; }
+
+    .btn-card:disabled {
+      color:#94a3b8;
+      border-color:#64748b;
+      opacity:.75;
+      cursor:not-allowed;
+      box-shadow:none;
+    }
+
+    .btn-card:disabled i { color:#94a3b8; }
+
+    .badge {
+      padding:5px 11px;
+      border-radius:14px;
+      font-size:12px;
+      font-weight:900;
+      white-space:nowrap;
+      display:flex;
+      align-items:center;
+      gap:6px;
+    }
+
+    .badge-pendiente {
+      background:rgba(231,76,60,.16);
+      color:#ff6b6b;
+      border:1px solid #ff6b6b;
+    }
+
+    .badge-terminado {
+      background:rgba(39,174,96,.16);
+      color:#2ecc71;
+      border:1px solid #2ecc71;
+    }
+
+    .badge-auditado {
+      background:rgba(96,165,250,.16);
+      color:#60a5fa;
+      border:1px solid #60a5fa;
+    }
+
+    .mensaje-lista {
+      text-align:center;
+      grid-column:1 / -1;
+      color:#d8e2ee;
+      padding:24px;
+      background:#172636;
+      border:1px solid var(--border-color);
+      border-radius:12px;
+    }
+
+    .mensaje-error { color:#ff8a8a; }
+  </style>
+</head>
+
+<body>
+  <header>
+    <div class="header-title-row">
+      <button class="btn-back-header" onclick="volverMenuSeguro()">
+        <i class="fas fa-arrow-left"></i>
+      </button>
+
+      <h1 class="app-title">LISTA ODT</h1>
+
+      <div class="logo-mini">
+        <img src="https://raw.githubusercontent.com/zelaya27/IMAGENES_AZ/main/UTCD%20Vertical.png" alt="Logo UTCD">
+      </div>
+    </div>
+
+    <div class="user-info">
+      <span class="info-item"><i class="fas fa-user-circle"></i> <span id="nombre-usuario">Usuario</span></span>
+      <span style="color: var(--border-color);">|</span>
+      <span class="info-item"><i class="fas fa-map-marker-alt"></i> <span id="nombre-sector">Sector</span></span>
+      <span style="color: var(--border-color);">|</span>
+      <button class="btn-logout" onclick="cerrarSesion()"><i class="fas fa-sign-out-alt"></i> Salir</button>
+    </div>
+  </header>
+
+  <div class="container">
+    <div class="panel-controles">
+      <div class="search-box">
+        <i class="fas fa-search"></i>
+        <input id="buscadorODT" type="text" placeholder="Buscar ODT..." autocomplete="off" oninput="renderizarTarjetas()">
+      </div>
+
+      <div class="filtros-flex">
+        <button class="btn-filtro activo" data-estado="Todas" onclick="filtrarEstado('Todas', this)">
+          <i class="fas fa-list"></i> Todas
+        </button>
+        <button class="btn-filtro" data-estado="Pendiente" onclick="filtrarEstado('Pendiente', this)">
+          <i class="fas fa-clock"></i> Pendientes
+        </button>
+        <button class="btn-filtro" data-estado="Terminado" onclick="filtrarEstado('Terminado', this)">
+          <i class="fas fa-check-double"></i> Terminadas
+        </button>
+        <button class="btn-filtro" data-estado="Auditado" onclick="filtrarEstado('Auditado', this)">
+          <i class="fas fa-shield-halved"></i> Auditadas
+        </button>
+      </div>
+
+      <div class="mostrar-contenedor">
+        <div class="mostrar-grupo">
+          <label style="font-weight:900;">Mostrar:</label>
+          <select id="limitSelector" class="input-filtro" onchange="renderizarTarjetas()">
+            <option value="10" selected>10 registros</option>
+            <option value="20">20 registros</option>
+            <option value="50">50 registros</option>
+            <option value="ALL">Todos</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <div id="contenedor-registros" class="registros-grid"></div>
+  </div>
+
+  <script>
+    let registrosGlobales = [];
+    let filtroEstadoActual = "Todas";
+
+    document.addEventListener("DOMContentLoaded", function() {
+      const usuario = sessionStorage.getItem("usuario");
+      const sector = sessionStorage.getItem("sector");
+
+      if (!usuario) {
+        window.location.href = "index.html";
+        return;
+      }
+
+      document.getElementById("nombre-usuario").textContent = usuario || "Usuario";
+      document.getElementById("nombre-sector").textContent = sector || "Sector";
+
+      cargarODT();
+    });
+
+    function volverMenuSeguro() {
+      window.location.href = "menu.html";
+    }
+
+    function cerrarSesion() {
+      sessionStorage.clear();
+      window.location.href = "index.html";
+    }
+
+    async function cargarODT() {
+      const contenedor = document.getElementById("contenedor-registros");
+      contenedor.innerHTML = '<div class="mensaje-lista"><i class="fas fa-spinner fa-spin fa-2x" style="color:var(--blue-active)"></i><p>Cargando ODT...</p></div>';
+
+      try {
+        const response = await fetch(CONFIG.URL_APPS_SCRIPT, {
+          method: "POST",
+          mode: "cors",
+          body: JSON.stringify({
+            action: "obtenerListaODT",
+            usuario: sessionStorage.getItem("usuario") || "",
+            tipo_usuario: sessionStorage.getItem("tipo_usuario") || "",
+            sector: sessionStorage.getItem("sector") || "",
+            numero_cuadrilla: sessionStorage.getItem("numero_cuadrilla") || sessionStorage.getItem("cuadrilla") || ""
+          })
+        });
+
+        const data = await response.json();
+
+        if (data.status === "Éxito") {
+          registrosGlobales = data.odts || [];
+          renderizarTarjetas();
+        } else {
+          throw new Error(data.message || "No se pudo cargar la lista ODT.");
+        }
+
+      } catch (error) {
+        console.error(error);
+        contenedor.innerHTML = '<div class="mensaje-lista mensaje-error"><i class="fas fa-exclamation-triangle"></i> Error cargando ODT: ' + escaparHTML(error.message) + '</div>';
+      }
+    }
+
+    function filtrarEstado(estado, boton) {
+      filtroEstadoActual = estado;
+      document.querySelectorAll(".btn-filtro").forEach(function(btn) {
+        btn.classList.remove("activo");
+      });
+      boton.classList.add("activo");
+      renderizarTarjetas();
+    }
+
+    function renderizarTarjetas() {
+      const contenedor = document.getElementById("contenedor-registros");
+      const textoBusqueda = normalizarTexto(document.getElementById("buscadorODT").value || "");
+      const limitSelector = document.getElementById("limitSelector");
+      let datos = registrosGlobales.slice();
+
+      if (filtroEstadoActual !== "Todas") {
+        datos = datos.filter(function(row) {
+          return normalizarTexto(row.col_3 || "Pendiente") === normalizarTexto(filtroEstadoActual);
+        });
+      }
+
+      if (textoBusqueda) {
+        datos = datos.filter(function(row) {
+          const busqueda = [row.col_0, row.col_4, row.col_8].join(" ");
+          return normalizarTexto(busqueda).includes(textoBusqueda);
+        });
+      }
+
+      if (limitSelector && limitSelector.value !== "ALL") {
+        datos = datos.slice(0, parseInt(limitSelector.value, 10));
+      }
+
+      contenedor.innerHTML = "";
+
+      if (datos.length === 0) {
+        contenedor.innerHTML = '<div class="mensaje-lista">No hay ODT para mostrar.</div>';
+        return;
+      }
+
+      datos.forEach(function(row) {
+        const estado = String(row.col_3 || "Pendiente").trim();
+        const estadoNorm = normalizarTexto(estado);
+        const pendiente = estadoNorm === "PENDIENTE";
+        const claseBadge = obtenerClaseBadge(estado);
+        const iconoEstado = obtenerIconoEstado(estado);
+        const fecha = row.col_5 || "Sin fecha";
+        const pdfUrl = String(row.col_35 || "").trim();
+
+        const card = document.createElement("div");
+        card.className = "registro-card";
+        card.innerHTML = `
+          <div class="registro-header">
+            <span class="registro-id"><i class="fas fa-hashtag"></i> ${escaparHTML(row.col_0 || "N/A")}</span>
+            <span class="badge ${claseBadge}">${iconoEstado} ${escaparHTML(estado)}</span>
+          </div>
+
+          <div class="registro-body">
+            <p><i class="far fa-calendar-alt"></i> <b>Fecha:</b> ${escaparHTML(fecha)}</p>
+            <p><i class="fas fa-user-helmet-safety"></i> <b>Cuadrilla:</b> ${escaparHTML(row.col_4 || "N/A")}</p>
+            <p><i class="fas fa-clipboard-list"></i> <b>Razón:</b> ${escaparHTML(row.col_8 || "N/A")}</p>
+          </div>
+
+          <div class="registro-footer">
+            <button class="btn-card" type="button" onclick="verPDF('${escaparAtributo(row.col_0 || "")}', '${escaparAtributo(pdfUrl)}')">
+              <i class="fas fa-file-pdf"></i> PDF
+            </button>
+
+            <button class="btn-card" type="button" ${pendiente ? "" : "disabled"} onclick="editarODT('${escaparAtributo(row.col_0 || "")}', '${escaparAtributo(estado)}')">
+              <i class="fas ${pendiente ? "fa-pen" : "fa-lock"}"></i> Editar
+            </button>
+          </div>
+        `;
+
+        contenedor.appendChild(card);
+      });
+    }
+
+    function obtenerClaseBadge(estado) {
+      const e = normalizarTexto(estado);
+      if (e === "TERMINADO") return "badge-terminado";
+      if (e === "AUDITADO") return "badge-auditado";
+      return "badge-pendiente";
+    }
+
+    function obtenerIconoEstado(estado) {
+      const e = normalizarTexto(estado);
+      if (e === "TERMINADO") return "<i class='fas fa-circle'></i>";
+      if (e === "AUDITADO") return "<i class='fas fa-circle'></i>";
+      return "<i class='fas fa-circle'></i>";
+    }
+
+    function editarODT(id, estado) {
+      if (normalizarTexto(estado) !== "PENDIENTE") {
+        alert("Esta ODT no se puede editar porque su estado es " + estado + ".");
+        return;
+      }
+
+      if (!id) {
+        alert("ID ODT no válido.");
+        return;
+      }
+
+      window.location.href = "odt.html?id=" + encodeURIComponent(id) + "&modo=editar";
+    }
+
+    function verPDF(id, url) {
+      if (!url) {
+        alert("Esta ODT aún no tiene PDF generado.");
+        return;
+      }
+
+      window.open(url, "_blank", "noopener");
+    }
+
+    function normalizarTexto(valor) {
+      return String(valor || "").trim().toUpperCase();
+    }
+
+    function escaparHTML(valor) {
+      return String(valor || "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+
+    function escaparAtributo(valor) {
+      return escaparHTML(valor).replace(/`/g, "&#096;");
+    }
+  </script>
+</body>
+</html>
