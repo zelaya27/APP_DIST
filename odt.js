@@ -16,10 +16,10 @@ document.addEventListener("DOMContentLoaded", function() {
   document.getElementById("col_3").value = "Pendiente";
   document.getElementById("col_4").value = fechaHoy();
 
-  agregarMaterial("cuadrilla");
-  agregarMaterial("supervisor");
-
+ cargarDatosMateriales();
+  
   actualizarBotones();
+  
 });
 
 function generarID() {
@@ -58,6 +58,7 @@ function pasoAnterior() {
 
     actualizarBotones();
   }
+
 }
 
 function actualizarBotones() {
@@ -112,44 +113,7 @@ function cerrarModal() {
   document.getElementById("modalBg").style.display = "none";
 }
 
-function agregarMaterial(tipo) {
-  const contenedor = tipo === "cuadrilla"
-    ? document.getElementById("listaCuadrilla")
-    : document.getElementById("listaSupervisor");
 
-  const div = document.createElement("div");
-  div.className = "material-card";
-
-  div.innerHTML = `
-    <div class="form-grid">
-      <div class="form-group">
-        <label>Código Material</label>
-        <input class="codigo-material">
-      </div>
-
-      <div class="form-group">
-        <label>Nombre Material</label>
-        <input class="nombre-material">
-      </div>
-
-      <div class="form-group">
-        <label>Unidad</label>
-        <input class="unidad-material">
-      </div>
-
-      <div class="form-group">
-        <label>Cantidad</label>
-        <input type="number" class="cantidad-material">
-      </div>
-    </div>
-
-    <button type="button" class="btn-delete" onclick="this.parentElement.remove()">
-      <i class="fas fa-trash"></i> Eliminar
-    </button>
-  `;
-
-  contenedor.appendChild(div);
-}
 
 function obtenerMateriales(tipo) {
   const contenedor = tipo === "cuadrilla"
