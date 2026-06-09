@@ -13,7 +13,7 @@
 <body>
 
 <header>
-  <button class="btn-back-header" onclick="location.href='menu.html'">
+  <button class="btn-back-header" onclick="volverMenuSeguro()">
     <i class="fas fa-arrow-left"></i>
   </button>
   <h2>ODT</h2>
@@ -64,9 +64,12 @@
 
         <div class="form-group">
           <label>Cuadrilla</label>
-          <select id="col_4" onchange="manejarCambioCuadrilla()">
-            <option value="">Seleccione cuadrilla...</option>
-          </select>
+          <input id="col_4" class="campo-selector" readonly placeholder="Seleccione cuadrilla..." onclick="abrirSelectorCuadrilla()">
+        </div>
+
+        <div class="form-group">
+          <label>Número Cuadrilla</label>
+          <input id="col_34" readonly>
         </div>
 
         <div class="form-group">
@@ -88,12 +91,7 @@
 
         <div class="form-group">
           <label>Razón de Trabajo</label>
-          <select id="col_8">
-            <option value="">Seleccione...</option>
-            <option value="Incidencia de Zona">Incidencia de Zona</option>
-            <option value="Incidencia Acometida/Medidor">Incidencia Acometida/Medidor</option>
-            <option value="Mantenimiento">Mantenimiento</option>
-          </select>
+          <input id="col_8" class="campo-selector" readonly placeholder="Seleccione..." onclick="abrirSelectorRazonTrabajo()">
         </div>
 
         <div class="form-group">
@@ -201,21 +199,17 @@
 
     <div class="form-group">
       <label>Categoría</label>
-      <select id="mat_categoria" onchange="filtrarMaterialesPorCategoria()">
-        <option value="">Todas</option>
-      </select>
+      <input id="mat_categoria" class="campo-selector" readonly placeholder="Todas" onclick="abrirSelectorCategoriaMaterial()">
     </div>
 
     <div class="form-group">
       <label>Nombre Material</label>
-      <input id="mat_nombre" list="lista_nombres_materiales" oninput="buscarMaterialPorNombreEnVivo()" onchange="validarMaterialPorNombre()">
-      <datalist id="lista_nombres_materiales"></datalist>
+      <input id="mat_nombre" class="campo-selector" readonly placeholder="Seleccione material..." onclick="abrirSelectorNombreMaterial()">
     </div>
 
     <div class="form-group">
       <label>Código Material</label>
-      <input id="mat_codigo" list="lista_codigos_materiales" oninput="buscarMaterialPorCodigoEnVivo()" onchange="validarMaterialPorCodigo()">
-      <datalist id="lista_codigos_materiales"></datalist>
+      <input id="mat_codigo" class="campo-selector" readonly placeholder="Seleccione código..." onclick="abrirSelectorCodigoMaterial()">
     </div>
 
     <div class="form-group">
@@ -245,9 +239,26 @@
 
     <div class="form-group">
       <label>Imagen</label>
-      <div id="mat_imagen_box" style="background:#0b141d;border:1px solid #2c3e50;border-radius:8px;padding:10px;text-align:center;">
+      <div id="mat_imagen_box" style="background:#101b26;border:1px solid #3f5870;border-radius:8px;padding:10px;text-align:center;">
         Sin imagen disponible
       </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-bg" id="selectorModalBg">
+  <div class="selector-modal">
+    <h3 id="selectorTitulo"><i class="fas fa-list"></i> Seleccionar</h3>
+
+    <div class="selector-search-box">
+      <i class="fas fa-search"></i>
+      <input id="selectorBuscador" type="text" placeholder="Buscar..." autocomplete="off" oninput="filtrarSelectorGlobal()">
+    </div>
+
+    <div id="selectorLista" class="selector-lista"></div>
+
+    <div class="modal-actions">
+      <button class="btn-wizard btn-back" type="button" onclick="cerrarSelectorGlobal()">Cancelar</button>
     </div>
   </div>
 </div>
