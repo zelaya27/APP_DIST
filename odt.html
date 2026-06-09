@@ -64,7 +64,7 @@
 
         <div class="form-group">
           <label>Cuadrilla</label>
-          <select id="col_4">
+          <select id="col_4" onchange="cargarStockContexto('cuadrilla')">
             <option value="">Seleccione cuadrilla...</option>
           </select>
         </div>
@@ -97,8 +97,8 @@
         </div>
 
         <div class="form-group">
-          <label>Reporte NME</label>
-          <input type="number" id="col_26" placeholder="Ingrese reporte NME">
+          <label>Reporte</label>
+          <input type="number" id="col_26" placeholder="Ingrese reporte">
         </div>
 
         <div class="form-group full-width">
@@ -140,11 +140,11 @@
         <input type="hidden" id="col_13">
 
         <div class="form-group full-width">
-          <button type="button" class="btn-mini" onclick="abrirModal('poste')">
+          <button type="button" class="btn-mini btn-modal-action" onclick="abrirModal('poste')">
             <i class="fas fa-bolt"></i> Datos Poste
           </button>
 
-          <button type="button" class="btn-mini" onclick="abrirModal('transformador')">
+          <button type="button" class="btn-mini btn-modal-action" onclick="abrirModal('transformador')">
             <i class="fas fa-charging-station"></i> Datos Transformador
           </button>
         </div>
@@ -208,13 +208,13 @@
 
     <div class="form-group">
       <label>Nombre Material</label>
-      <input id="mat_nombre" list="lista_nombres_materiales" onchange="seleccionarMaterialPorNombre()">
+      <input id="mat_nombre" list="lista_nombres_materiales" oninput="buscarMaterialPorNombreEnVivo()" onchange="validarMaterialPorNombre()">
       <datalist id="lista_nombres_materiales"></datalist>
     </div>
 
     <div class="form-group">
       <label>Código Material</label>
-      <input id="mat_codigo" list="lista_codigos_materiales" onchange="seleccionarMaterialPorCodigo()">
+      <input id="mat_codigo" list="lista_codigos_materiales" oninput="buscarMaterialPorCodigoEnVivo()" onchange="validarMaterialPorCodigo()">
       <datalist id="lista_codigos_materiales"></datalist>
     </div>
 
