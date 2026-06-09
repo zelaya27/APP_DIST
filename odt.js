@@ -1,9 +1,24 @@
 let pasoActual = 1;
 const totalPasos = 3;
 
-// Guarda temporalmente los campos que solo se muestran dentro del modal
 const datosModalODT = {};
 let cuadrillaAnterior = "";
+let numeroCuadrillaAnterior = "";
+let cuadrillasBD = [];
+let formularioSucio = false;
+let guardadoCorrecto = false;
+
+const razonesTrabajoBD = [
+  "Incidencia de Zona",
+  "Incidencia Acometida/Medidor",
+  "Mantenimiento"
+];
+
+let selectorGlobal = {
+  titulo: "Seleccionar",
+  items: [],
+  onSelect: null
+};
 
 document.addEventListener("DOMContentLoaded", function() {
   const usuario = sessionStorage.getItem("usuario");
@@ -14,29 +29,52 @@ document.addEventListener("DOMContentLoaded", function() {
     return;
   }
 
-  // =====================================================
-  // DATOS AUTOMÁTICOS DEL STEP 1
-  // =====================================================
-
   document.getElementById("col_0").value = generarID();
   document.getElementById("col_1").value = usuario;
   document.getElementById("col_2").value = sector;
   document.getElementById("col_3").value = "Pendiente";
   document.getElementById("col_5").value = fechaHoy();
 
-  // =====================================================
-  // CARGAS INICIALES
-  // =====================================================
-
   cargarCuadrillas();
   cargarDatosMateriales();
-
+  activarProteccionSalida();
   actualizarBotones();
 });
 
+// =====================================================
+// PROTECCIÓN CONTRA SALIDA ACCIDENTAL
+// =====================================================
+
+function activarProteccionSalida() {
+  const form = document.getElementById("formODT");
+  if (form) {
+    form.addEventListener("input", function() { formularioSucio = true; });
+    form.addEventListener("change", function() { formularioSucio = true; });
+  }
+
+  window.addEventListener("beforeunload", function(e) {
+    if (formularioSucio && !guardadoCorrecto) {
+      e.preventDefault();
+      e.returnValue = "Tiene datos sin guardar. ¿Desea salir?";
+      return "Tiene datos sin guardar. ¿Desea salir?";
+    }
+  });
+}
+
+function volverMenuSeguro() {
+  if (formularioSucio && !guardadoCorrecto) {
+    const salir = confirm("Tiene datos sin guardar.\n\n¿Desea salir y perder la información capturada?");
+    if (!salir) return;
+  }
+  window.location.href = "menu.html";
+}
+
+function marcarFormularioSucio() {
+  formularioSucio = true;
+}
 
 // =====================================================
-// GENERAR ID ÚNICO
+// GENERAR ID / FECHA
 // =====================================================
 
 function generarID() {
@@ -44,125 +82,216 @@ function generarID() {
   return "ODT-" + n;
 }
 
-
-// =====================================================
-// FECHA ACTUAL
-// =====================================================
-
 function fechaHoy() {
   const hoy = new Date();
   return hoy.toISOString().split("T")[0];
 }
 
+// =====================================================
+// SELECTOR GLOBAL CON BUSCADOR
+// =====================================================
+
+function abrirSelectorGlobal(titulo, items, onSelect) {
+  selectorGlobal = {
+    titulo: titulo,
+    items: items || [],
+    onSelect: onSelect
+  };
+
+  document.getElementById("selectorTitulo").innerHTML = '<i class="fas fa-list"></i> ' + escaparHTML(titulo);
+  document.getElementById("selectorBuscador").value = "";
+  document.getElementById("selectorModalBg").style.display = "flex";
+
+  renderizarSelectorGlobal(selectorGlobal.items);
+
+  setTimeout(function() {
+    const buscador = document.getElementById("selectorBuscador");
+    if (buscador) buscador.focus();
+  }, 120);
+}
+
+function cerrarSelectorGlobal() {
+  document.getElementById("selectorModalBg").style.display = "none";
+}
+
+function filtrarSelectorGlobal() {
+  const texto = normalizarLocal(document.getElementById("selectorBuscador").value);
+
+  const filtrados = selectorGlobal.items.filter(function(item) {
+    return normalizarLocal(item.texto).includes(texto) || normalizarLocal(item.subtexto || "").includes(texto);
+  });
+
+  renderizarSelectorGlobal(filtrados);
+}
+
+function renderizarSelectorGlobal(items) {
+  const lista = document.getElementById("selectorLista");
+  lista.innerHTML = "";
+
+  if (!items || items.length === 0) {
+    lista.innerHTML = '<div class="selector-empty">Sin resultados</div>';
+    return;
+  }
+
+  items.forEach(function(item) {
+    const div = document.createElement("div");
+    div.className = "selector-item";
+    div.innerHTML = escaparHTML(item.texto) + (item.subtexto ? '<br><small>' + escaparHTML(item.subtexto) + '</small>' : '');
+
+    div.addEventListener("touchstart", function() {
+      marcarFilaSelectorActiva(div);
+    }, { passive: true });
+
+    div.addEventListener("mousedown", function() {
+      marcarFilaSelectorActiva(div);
+    });
+
+    div.addEventListener("click", function() {
+      marcarFilaSelectorActiva(div);
+      setTimeout(function() {
+        if (typeof selectorGlobal.onSelect === "function") selectorGlobal.onSelect(item);
+        cerrarSelectorGlobal();
+        marcarFormularioSucio();
+      }, 80);
+    });
+
+    lista.appendChild(div);
+  });
+}
+
+function marcarFilaSelectorActiva(fila) {
+  document.querySelectorAll("#selectorLista .selector-item").forEach(function(el) {
+    el.classList.remove("activo");
+  });
+  fila.classList.add("activo");
+}
+
+function normalizarLocal(valor) {
+  return String(valor || "").trim().toUpperCase();
+}
 
 // =====================================================
-// CARGAR CUADRILLAS DESDE APPS SCRIPT
-// Hoja: codigo_validaciones / cuadrillas / Col1
-// Regla:
-// - tipo_usuario 3: autocompleta cuadrilla de usuarios Col5 y bloquea
-// - tipo_usuario 1 y 2: deja lista desplegable habilitada
+// CUADRILLAS
 // =====================================================
 
 async function cargarCuadrillas() {
-  const select = document.getElementById("col_4");
-
-  if (!select) return;
+  const campoNombre = document.getElementById("col_4");
+  const campoNumero = document.getElementById("col_34");
+  if (!campoNombre || !campoNumero) return;
 
   const tipoUsuario = String(sessionStorage.getItem("tipo_usuario") || "").trim();
-  const cuadrillaUsuario = String(sessionStorage.getItem("cuadrilla") || "").trim();
+  const numeroCuadrillaUsuario = String(sessionStorage.getItem("numero_cuadrilla") || sessionStorage.getItem("cuadrilla") || "").trim();
+  const sector = String(sessionStorage.getItem("sector") || "").trim();
 
-  select.disabled = false;
-  select.innerHTML = '<option value="">Cargando cuadrillas...</option>';
+  campoNombre.value = "Cargando cuadrillas...";
+  campoNumero.value = "";
 
   try {
     const response = await fetch(CONFIG.URL_APPS_SCRIPT, {
       method: "POST",
       mode: "cors",
-      body: JSON.stringify({
-        action: "obtenerCuadrillas"
-      })
+      body: JSON.stringify({ action: "obtenerCuadrillas", sector: sector })
     });
 
     const data = await response.json();
 
-    select.innerHTML = '<option value="">Seleccione cuadrilla...</option>';
-
     if (data.status === "Éxito" && data.cuadrillas && data.cuadrillas.length > 0) {
-      data.cuadrillas.forEach(function(cuadrilla) {
-        const option = document.createElement("option");
-        option.value = cuadrilla;
-        option.textContent = cuadrilla;
-        select.appendChild(option);
-      });
+      cuadrillasBD = data.cuadrillas;
     } else {
-      alert("No se encontraron cuadrillas.");
+      cuadrillasBD = [];
+      alert("No se encontraron cuadrillas para el sector.");
     }
 
-    if (tipoUsuario === "3") {
-      if (cuadrillaUsuario) {
-        asegurarOpcionSelect(select, cuadrillaUsuario);
-        select.value = cuadrillaUsuario;
-        cuadrillaAnterior = cuadrillaUsuario;
-        await cargarStockContexto("cuadrilla");
-      }
+    campoNombre.value = "";
 
-      select.disabled = true;
+    if (tipoUsuario === "3") {
+      const encontrada = cuadrillasBD.find(c => normalizarLocal(c.numero) === normalizarLocal(numeroCuadrillaUsuario));
+
+      campoNumero.value = numeroCuadrillaUsuario;
+      campoNombre.value = encontrada ? encontrada.nombre : numeroCuadrillaUsuario;
+      campoNombre.classList.remove("campo-selector");
+      campoNombre.onclick = null;
+      campoNombre.setAttribute("readonly", "readonly");
+
+      cuadrillaAnterior = campoNombre.value;
+      numeroCuadrillaAnterior = campoNumero.value;
+      await cargarStockContexto("cuadrilla");
     } else {
-      select.disabled = false;
-      cuadrillaAnterior = select.value || "";
+      campoNombre.classList.add("campo-selector");
+      campoNombre.onclick = abrirSelectorCuadrilla;
+      cuadrillaAnterior = campoNombre.value || "";
+      numeroCuadrillaAnterior = campoNumero.value || "";
     }
 
   } catch (error) {
     console.error("Error cargando cuadrillas:", error);
-    select.innerHTML = '<option value="">Error cargando cuadrillas</option>';
+    campoNombre.value = "";
     alert("Error de conexión cargando cuadrillas.");
   }
 }
 
-function asegurarOpcionSelect(select, valor) {
-  const existe = Array.from(select.options).some(opt => opt.value === valor);
+function abrirSelectorCuadrilla() {
+  const tipoUsuario = String(sessionStorage.getItem("tipo_usuario") || "").trim();
+  if (tipoUsuario === "3") return;
 
-  if (!existe && valor) {
-    const option = document.createElement("option");
-    option.value = valor;
-    option.textContent = valor;
-    select.appendChild(option);
-  }
+  const items = cuadrillasBD.map(function(c) {
+    return { texto: c.nombre, subtexto: c.numero ? "N° " + c.numero : "", data: c };
+  });
+
+  abrirSelectorGlobal("Seleccionar cuadrilla", items, async function(item) {
+    await seleccionarCuadrilla(item.data);
+  });
 }
 
-// =====================================================
-// CAMBIO DE CUADRILLA
-// Si ya hay materiales de cuadrilla agregados, confirma y limpia
-// =====================================================
+async function seleccionarCuadrilla(cuadrilla) {
+  const campoNombre = document.getElementById("col_4");
+  const campoNumero = document.getElementById("col_34");
+  const nuevoNombre = cuadrilla.nombre || "";
+  const nuevoNumero = cuadrilla.numero || "";
 
-async function manejarCambioCuadrilla() {
-  const select = document.getElementById("col_4");
-  const nuevaCuadrilla = select ? select.value : "";
   const lista = document.getElementById("listaCuadrilla");
   const tieneMateriales = lista && lista.querySelector(".material-card");
 
-  if (tieneMateriales && nuevaCuadrilla !== cuadrillaAnterior) {
+  if (tieneMateriales && nuevoNumero !== numeroCuadrillaAnterior) {
     const confirmar = confirm(
       "Cambió la cuadrilla seleccionada.\n\n" +
       "Esto limpiará los materiales ya agregados en el Step 2 para evitar consumos con stock incorrecto.\n\n" +
       "¿Desea continuar?"
     );
 
-    if (!confirmar) {
-      select.value = cuadrillaAnterior;
-      return;
-    }
-
+    if (!confirmar) return;
     lista.innerHTML = "";
   }
 
-  cuadrillaAnterior = nuevaCuadrilla;
+  campoNombre.value = nuevoNombre;
+  campoNumero.value = nuevoNumero;
+  cuadrillaAnterior = nuevoNombre;
+  numeroCuadrillaAnterior = nuevoNumero;
+
   stockCargado.cuadrilla = false;
   stockCache.cuadrilla = {};
 
   await cargarStockContexto("cuadrilla");
 }
 
+async function manejarCambioCuadrilla() {
+  const encontrada = cuadrillasBD.find(c => c.nombre === document.getElementById("col_4").value);
+  if (encontrada) await seleccionarCuadrilla(encontrada);
+}
+
+// =====================================================
+// RAZÓN DE TRABAJO
+// =====================================================
+
+function abrirSelectorRazonTrabajo() {
+  const items = razonesTrabajoBD.map(function(r) {
+    return { texto: r, data: r };
+  });
+
+  abrirSelectorGlobal("Razón de trabajo", items, function(item) {
+    document.getElementById("col_8").value = item.data;
+  });
+}
 
 // =====================================================
 // NAVEGACIÓN DEL WIZARD
@@ -201,7 +330,6 @@ function actualizarBotones() {
   document.getElementById("btnSiguiente").style.display = pasoActual === totalPasos ? "none" : "block";
   document.getElementById("btnGuardar").style.display = pasoActual === totalPasos ? "block" : "none";
 }
-
 
 // =====================================================
 // MODAL DATOS POSTE / TRANSFORMADOR
@@ -244,7 +372,7 @@ function campoModal(label, id, type = "text") {
   return `
     <div class="form-group" style="margin-bottom:12px;">
       <label>${label}</label>
-      <input type="${type}" id="${id}" value="${escaparHTML(valor)}" oninput="guardarDatoModal('${id}', this.value)">
+      <input type="${type}" id="${id}" value="${escaparHTML(valor)}" oninput="guardarDatoModal('${id}', this.value); marcarFormularioSucio();">
     </div>
   `;
 }
@@ -263,9 +391,7 @@ function sincronizarDatosModalAbierto() {
   for (let i = 14; i <= 25; i++) {
     const id = "col_" + i;
     const campo = document.getElementById(id);
-    if (campo) {
-      datosModalODT[id] = campo.value || "";
-    }
+    if (campo) datosModalODT[id] = campo.value || "";
   }
 }
 
@@ -282,9 +408,8 @@ function cerrarModal() {
   document.getElementById("modalBg").style.display = "none";
 }
 
-
 // =====================================================
-// OBTENER MATERIALES YA AGREGADOS AL STEP 2 O STEP 3
+// OBTENER MATERIALES YA AGREGADOS
 // =====================================================
 
 function obtenerMateriales(tipo) {
@@ -301,18 +426,12 @@ function obtenerMateriales(tipo) {
     const cantidad = card.querySelector(".cantidad-material").value.trim();
 
     if (codigo || nombre || cantidad) {
-      materiales.push({
-        codigo: codigo,
-        nombre: nombre,
-        unidad: unidad,
-        cantidad: cantidad
-      });
+      materiales.push({ codigo: codigo, nombre: nombre, unidad: unidad, cantidad: cantidad });
     }
   });
 
   return materiales;
 }
-
 
 // =====================================================
 // VALIDACIONES ANTES DE GUARDAR
@@ -320,11 +439,12 @@ function obtenerMateriales(tipo) {
 
 function validarAntesGuardar() {
   const cuadrilla = document.getElementById("col_4").value.trim();
+  const numeroCuadrilla = document.getElementById("col_34").value.trim();
   const razonTrabajo = document.getElementById("col_8").value.trim();
   const trabajoRealizado = document.getElementById("col_9").value.trim();
 
-  if (!cuadrilla) {
-    alert("Debe seleccionar una cuadrilla.");
+  if (!cuadrilla || !numeroCuadrilla) {
+    alert("Debe seleccionar una cuadrilla válida.");
     pasoActual = 1;
     mostrarPasoActual();
     document.getElementById("col_4").focus();
@@ -358,13 +478,8 @@ function mostrarPasoActual() {
   actualizarBotones();
 }
 
-
 // =====================================================
 // GUARDAR ODT COMPLETA
-// Guarda:
-// - Datos generales en hoja odt
-// - Materiales cuadrilla en consumo_cuadrilla
-// - Materiales supervisor en consumo_supervisor
 // =====================================================
 
 async function guardarODT() {
@@ -373,14 +488,10 @@ async function guardarODT() {
   sincronizarDatosModalAbierto();
 
   const btn = document.getElementById("btnGuardar");
-
   btn.disabled = true;
   btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Guardando...';
 
-  // Validar / actualizar coordenadas antes de guardar
-  if (document.getElementById("col_12").value.trim()) {
-    convertirGpsManual();
-  }
+  if (document.getElementById("col_12").value.trim()) convertirGpsManual();
 
   if (document.getElementById("utm_x").value.trim() && document.getElementById("utm_y").value.trim()) {
     convertirUtmXYManual();
@@ -388,8 +499,7 @@ async function guardarODT() {
 
   const odt = {};
 
-  // Ahora la hoja odt llega de Col0 a Col33
-  for (let i = 0; i <= 33; i++) {
+  for (let i = 0; i <= 34; i++) {
     const campo = document.getElementById("col_" + i);
     odt["col_" + i] = campo ? campo.value : (datosModalODT["col_" + i] || "");
   }
@@ -411,6 +521,8 @@ async function guardarODT() {
     const data = await response.json();
 
     if (data.status === "Éxito") {
+      guardadoCorrecto = true;
+      formularioSucio = false;
       alert("ODT guardada correctamente: " + data.id);
       window.location.href = "menu.html";
     } else {
