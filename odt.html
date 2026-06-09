@@ -17,26 +17,27 @@
     <i class="fas fa-arrow-left"></i>
   </button>
   <h2>ODT</h2>
-</header>
 
-<div class="container">
-
-  <div class="steps-container">
+  <div class="steps-container steps-header">
     <div class="step-indicator active" id="ind-1">
       <div class="step-circle">1</div>
-      ODT
     </div>
 
     <div class="step-indicator" id="ind-2">
       <div class="step-circle">2</div>
-      Cuadrilla
     </div>
 
     <div class="step-indicator" id="ind-3">
       <div class="step-circle">3</div>
-      Supervisor
+    </div>
+
+    <div class="step-indicator" id="ind-4">
+      <div class="step-circle">4</div>
     </div>
   </div>
+</header>
+
+<div class="container">
 
   <form id="formODT">
 
@@ -111,7 +112,7 @@
 
         <div class="form-group">
           <label>Medidor</label>
-          <input type="number" id="col_11">
+          <input type="text" id="col_11">
         </div>
 
         <div class="form-group">
@@ -136,6 +137,7 @@
         </div>
 
         <input type="hidden" id="col_13">
+        <input type="hidden" id="col_35">
 
         <div class="form-group full-width">
           <button type="button" class="btn-mini btn-modal-action" onclick="abrirModal('poste')">
@@ -168,6 +170,28 @@
       <button type="button" class="btn-add" onclick="abrirModalMaterial('supervisor')">
         <i class="fas fa-plus"></i> Agregar Material Supervisor
       </button>
+    </div>
+
+    <div class="step-content" id="step-4">
+      <h3><i class="fas fa-save"></i> Guardar / PDF</h3>
+
+      <div class="step4-card">
+        <p class="step4-text">Revise la información capturada antes de guardar la ODT.</p>
+
+        <button class="btn-add btn-step4-save" id="btnGuardarStep4" onclick="guardarODT()" type="button">
+          <i class="fas fa-save"></i> Guardar datos
+        </button>
+
+        <div id="mensajeGuardadoStep4" class="mensaje-guardado-step4" style="display:none;"></div>
+
+        <button class="btn-add btn-pdf-step4" id="btnDescargarPDF" onclick="generarPDFODT()" type="button" style="display:none;">
+          <i class="fas fa-file-pdf"></i> Descargar PDF
+        </button>
+
+        <a id="linkPDFGenerado" class="link-pdf-generado" href="#" target="_blank" rel="noopener" style="display:none;">
+          <i class="fas fa-up-right-from-square"></i> Abrir PDF generado
+        </a>
+      </div>
     </div>
 
   </form>
