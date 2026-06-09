@@ -12,8 +12,8 @@ let urlPDFGenerado = "";
 
 const razonesTrabajoBD = [
   "INCIDENCIAS",
-  "OPERACIONES",
-  "MANTENIMIENTO"
+  "MANTENIMIENTO",
+  "OPERACIONES"
 ];
 
 let selectorGlobal = {
@@ -328,11 +328,25 @@ function pasoAnterior() {
 }
 
 function actualizarBotones() {
-  document.getElementById("btnAnterior").style.display = pasoActual === 1 ? "none" : "block";
-  document.getElementById("btnSiguiente").style.display = pasoActual === totalPasos ? "none" : "block";
-
+  const btnAnterior = document.getElementById("btnAnterior");
+  const btnSiguiente = document.getElementById("btnSiguiente");
   const btnGuardarFooter = document.getElementById("btnGuardar");
-  if (btnGuardarFooter) btnGuardarFooter.style.display = "none";
+
+  if (btnAnterior) {
+    btnAnterior.style.display = pasoActual === 1 ? "none" : "block";
+  }
+
+  // IMPORTANTE:
+  // Con 4 pasos, el botón Siguiente debe verse en Step 1, Step 2 y Step 3.
+  // Solo se oculta cuando ya estamos en Step 4.
+  if (btnSiguiente) {
+    btnSiguiente.style.display = pasoActual < totalPasos ? "block" : "none";
+  }
+
+  // El guardado ahora vive dentro del Step 4, no en la barra inferior.
+  if (btnGuardarFooter) {
+    btnGuardarFooter.style.display = "none";
+  }
 }
 
 // =====================================================
