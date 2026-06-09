@@ -64,7 +64,7 @@
 
         <div class="form-group">
           <label>Cuadrilla</label>
-          <select id="col_4" onchange="cargarStockContexto('cuadrilla')">
+          <select id="col_4" onchange="manejarCambioCuadrilla()">
             <option value="">Seleccione cuadrilla...</option>
           </select>
         </div>
@@ -233,6 +233,11 @@
       <input type="number" id="mat_cantidad">
     </div>
 
+    <div class="modal-actions modal-actions-material">
+      <button class="btn-wizard btn-back" type="button" onclick="cerrarModalMaterial()">Cancelar</button>
+      <button class="btn-wizard btn-save" type="button" onclick="agregarMaterialDesdeModal()">Agregar</button>
+    </div>
+
     <div class="form-group">
       <label>Observaciones</label>
       <textarea id="mat_observaciones" rows="2" readonly></textarea>
@@ -243,11 +248,6 @@
       <div id="mat_imagen_box" style="background:#0b141d;border:1px solid #2c3e50;border-radius:8px;padding:10px;text-align:center;">
         Sin imagen disponible
       </div>
-    </div>
-
-    <div class="modal-actions">
-      <button class="btn-wizard btn-back" type="button" onclick="cerrarModalMaterial()">Cancelar</button>
-      <button class="btn-wizard btn-save" type="button" onclick="agregarMaterialDesdeModal()">Agregar</button>
     </div>
   </div>
 </div>
