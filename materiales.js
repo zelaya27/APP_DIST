@@ -16,7 +16,6 @@ let materialSeleccionadoActual = null;
 
 // =====================================================
 // CARGAR BASE DE MATERIALES Y CATEGORÍAS
-// Se carga una sola vez al abrir la ODT
 // =====================================================
 
 async function cargarDatosMateriales() {
@@ -24,9 +23,7 @@ async function cargarDatosMateriales() {
     const response = await fetch(CONFIG.URL_APPS_SCRIPT, {
       method: "POST",
       mode: "cors",
-      body: JSON.stringify({
-        action: "obtenerDatosMateriales"
-      })
+      body: JSON.stringify({ action: "obtenerDatosMateriales" })
     });
 
     const data = await response.json();
@@ -34,9 +31,6 @@ async function cargarDatosMateriales() {
     if (data.status === "Éxito") {
       materialesBD = data.materiales || [];
       categoriasBD = data.categorias || [];
-
-      llenarCategorias();
-      llenarListasMateriales(materialesBD);
     } else {
       alert("Error cargando materiales: " + data.message);
     }
@@ -47,18 +41,17 @@ async function cargarDatosMateriales() {
   }
 }
 
-
 // =====================================================
 // CARGAR STOCK EN MEMORIA
-// Step 2 = cuadrilla
-// Step 3 = supervisor
+// Step 2 = número cuadrilla col_34 contra Stockmateriales Col2
+// Step 3 = grupo supervisor contra Stockmateriales Col2
 // =====================================================
 
 async function cargarStockContexto(tipo) {
   const sector = sessionStorage.getItem("sector") || "";
-  const cuadrilla = document.getElementById("col_4") ? document.getElementById("col_4").value : "";
+  const numeroCuadrilla = document.getElementById("col_34") ? document.getElementById("col_34").value.trim() : "";
 
-  if (tipo === "cuadrilla" && !cuadrilla) {
+  if (tipo === "cuadrilla" && !numeroCuadrilla) {
     stockCache.cuadrilla = {};
     stockCargado.cuadrilla = false;
     return false;
@@ -72,7 +65,8 @@ async function cargarStockContexto(tipo) {
         action: "obtenerStockContexto",
         tipo: tipo,
         sector: sector,
-        cuadrilla: cuadrilla
+        numeroCuadrilla: numeroCuadrilla,
+        cuadrilla: numeroCuadrilla
       })
     });
 
@@ -97,74 +91,76 @@ async function cargarStockContexto(tipo) {
   }
 }
 
-
 // =====================================================
-// LLENAR CATEGORÍAS
+// FILTROS LOCALES
 // =====================================================
 
-function llenarCategorias() {
-  const select = document.getElementById("mat_categoria");
-  if (!select) return;
+function obtenerMaterialesFiltradosPorCategoria() {
+  const categoria = document.getElementById("mat_categoria").value.trim();
 
-  select.innerHTML = '<option value="">Todas</option>';
+  if (!categoria) return materialesBD;
 
-  categoriasBD.forEach(cat => {
-    if (cat) {
-      const option = document.createElement("option");
-      option.value = cat;
-      option.textContent = cat;
-      select.appendChild(option);
-    }
-  });
+  return materialesBD.filter(m => normalizarLocal(m.categoria) === normalizarLocal(categoria));
 }
 
-
 // =====================================================
-// LLENAR LISTAS DE NOMBRES Y CÓDIGOS
-// =====================================================
-
-function llenarListasMateriales(lista) {
-  const listaNombres = document.getElementById("lista_nombres_materiales");
-  const listaCodigos = document.getElementById("lista_codigos_materiales");
-
-  if (!listaNombres || !listaCodigos) return;
-
-  listaNombres.innerHTML = "";
-  listaCodigos.innerHTML = "";
-
-  lista.forEach(m => {
-    const optNombre = document.createElement("option");
-    optNombre.value = m.nombre;
-    listaNombres.appendChild(optNombre);
-
-    const optCodigo = document.createElement("option");
-    optCodigo.value = m.codigo;
-    listaCodigos.appendChild(optCodigo);
-  });
-}
-
-
-// =====================================================
-// FILTRAR POR CATEGORÍA
+// SELECTORES CON BUSCADOR
 // =====================================================
 
-function filtrarMaterialesPorCategoria() {
-  const categoria = document.getElementById("mat_categoria").value;
-
-  limpiarCamposMaterialSeleccionado(false);
-
-  if (!categoria) {
-    llenarListasMateriales(materialesBD);
-    return;
-  }
-
-  const filtrados = materialesBD.filter(m =>
-    String(m.categoria).trim() === String(categoria).trim()
+function abrirSelectorCategoriaMaterial() {
+  const items = [{ texto: "Todas", data: "" }].concat(
+    categoriasBD.map(cat => ({ texto: cat, data: cat }))
   );
 
-  llenarListasMateriales(filtrados);
+  abrirSelectorGlobal("Seleccionar categoría", items, function(item) {
+    document.getElementById("mat_categoria").value = item.data || "";
+    limpiarCamposMaterialSeleccionado(false);
+  });
 }
 
+function abrirSelectorNombreMaterial() {
+  const lista = obtenerMaterialesFiltradosPorCategoria();
+
+  const items = lista.map(m => ({
+    texto: m.nombre,
+    subtexto: m.codigo + (m.categoria ? " | " + m.categoria : ""),
+    data: m
+  }));
+
+  abrirSelectorGlobal("Seleccionar material", items, function(item) {
+    llenarMaterialSeleccionado(item.data);
+  });
+}
+
+function abrirSelectorCodigoMaterial() {
+  const lista = obtenerMaterialesFiltradosPorCategoria();
+
+  const items = lista.map(m => ({
+    texto: m.codigo,
+    subtexto: m.nombre,
+    data: m
+  }));
+
+  abrirSelectorGlobal("Seleccionar código", items, function(item) {
+    llenarMaterialSeleccionado(item.data);
+  });
+}
+
+// =====================================================
+// COMPATIBILIDAD CON FUNCIONES ANTERIORES
+// =====================================================
+
+function llenarCategorias() {}
+function llenarListasMateriales(lista) {}
+
+function filtrarMaterialesPorCategoria() {
+  limpiarCamposMaterialSeleccionado(false);
+}
+
+function buscarMaterialPorNombreEnVivo() {}
+function buscarMaterialPorCodigoEnVivo() {}
+function validarMaterialPorNombre() {}
+function validarMaterialPorCodigo() {}
 
 // =====================================================
 // ABRIR MODAL MATERIAL
@@ -173,9 +169,9 @@ function filtrarMaterialesPorCategoria() {
 async function abrirModalMaterial(tipo) {
   tipoMaterialActual = tipo;
 
-  const cuadrilla = document.getElementById("col_4") ? document.getElementById("col_4").value : "";
+  const numeroCuadrilla = document.getElementById("col_34") ? document.getElementById("col_34").value.trim() : "";
 
-  if (tipo === "cuadrilla" && !cuadrilla) {
+  if (tipo === "cuadrilla" && !numeroCuadrilla) {
     alert("Debe seleccionar una cuadrilla en el Step 1 antes de agregar materiales.");
     return;
   }
@@ -186,9 +182,7 @@ async function abrirModalMaterial(tipo) {
     ? "Agregar Material - Cuadrilla"
     : "Agregar Material - Supervisor";
 
-  document.getElementById("tituloModalMaterial").innerHTML =
-    '<i class="fas fa-box"></i> ' + titulo;
-
+  document.getElementById("tituloModalMaterial").innerHTML = '<i class="fas fa-box"></i> ' + titulo;
   document.getElementById("modalMaterialBg").style.display = "flex";
 
   if (!stockCargado[tipo]) {
@@ -203,14 +197,12 @@ function cerrarModalMaterial() {
   document.getElementById("modalMaterialBg").style.display = "none";
 }
 
-
 // =====================================================
 // LIMPIAR MODAL
 // =====================================================
 
 function limpiarModalMaterial() {
   limpiarSeleccionMaterialCompleta();
-  llenarListasMateriales(materialesBD);
 }
 
 function limpiarCamposMaterialSeleccionado(limpiarCategoria) {
@@ -237,108 +229,8 @@ function limpiarSeleccionMaterialCompleta() {
   actualizarColorExistencia(null);
 }
 
-
-// =====================================================
-// BÚSQUEDA EN VIVO
-// Si encuentra coincidencia exacta, llena datos al instante
-// =====================================================
-
-function buscarMaterialPorNombreEnVivo() {
-  const nombre = document.getElementById("mat_nombre").value.trim();
-
-  if (!nombre) {
-    limpiarSeleccionMaterialCompleta();
-    llenarListasMateriales(materialesBD);
-    return;
-  }
-
-  const material = materialesBD.find(m =>
-    String(m.nombre).trim().toUpperCase() === nombre.toUpperCase()
-  );
-
-  if (material) {
-    llenarMaterialSeleccionado(material);
-  }
-}
-
-function buscarMaterialPorCodigoEnVivo() {
-  const codigo = document.getElementById("mat_codigo").value.trim();
-
-  if (!codigo) {
-    limpiarSeleccionMaterialCompleta();
-    llenarListasMateriales(materialesBD);
-    return;
-  }
-
-  const material = materialesBD.find(m =>
-    String(m.codigo).trim() === codigo
-  );
-
-  if (material) {
-    llenarMaterialSeleccionado(material);
-  }
-}
-
-
-// =====================================================
-// VALIDAR MATERIAL POR NOMBRE
-// No permite nombres fuera de la lista
-// =====================================================
-
-function validarMaterialPorNombre() {
-  const nombre = document.getElementById("mat_nombre").value.trim();
-
-  if (!nombre) {
-    limpiarSeleccionMaterialCompleta();
-    llenarListasMateriales(materialesBD);
-    return;
-  }
-
-  const material = materialesBD.find(m =>
-    String(m.nombre).trim().toUpperCase() === nombre.toUpperCase()
-  );
-
-  if (!material) {
-    alert("Debe seleccionar un material válido de la lista.");
-    limpiarCamposMaterialSeleccionado(true);
-    return;
-  }
-
-  llenarMaterialSeleccionado(material);
-}
-
-
-// =====================================================
-// VALIDAR MATERIAL POR CÓDIGO
-// No permite códigos fuera de la lista
-// =====================================================
-
-function validarMaterialPorCodigo() {
-  const codigo = document.getElementById("mat_codigo").value.trim();
-
-  if (!codigo) {
-    limpiarSeleccionMaterialCompleta();
-    llenarListasMateriales(materialesBD);
-    return;
-  }
-
-  const material = materialesBD.find(m =>
-    String(m.codigo).trim() === codigo
-  );
-
-  if (!material) {
-    alert("Debe seleccionar un código válido de la lista.");
-    limpiarCamposMaterialSeleccionado(true);
-    return;
-  }
-
-  llenarMaterialSeleccionado(material);
-}
-
-
 // =====================================================
 // LLENAR DATOS DEL MATERIAL SELECCIONADO
-// Se hace localmente desde memoria, sin consultar Apps Script
 // =====================================================
 
 function llenarMaterialSeleccionado(material) {
@@ -357,10 +249,8 @@ function llenarMaterialSeleccionado(material) {
   actualizarColorExistencia(existencia);
 }
 
-
 // =====================================================
 // CONSULTA DE EXISTENCIA LOCAL
-// Ya no consulta Apps Script cada vez que cambia material
 // =====================================================
 
 function obtenerExistenciaLocal(codigo) {
@@ -378,19 +268,16 @@ function actualizarColorExistencia(existencia) {
 
   campo.classList.remove("stock-positivo", "stock-cero-negativo");
 
-  if (existencia === null || existencia === undefined || existencia === "") {
-    return;
-  }
+  if (existencia === null || existencia === undefined || existencia === "") return;
 
   const valor = Number(existencia);
 
-  if (valor > 0) {
-    campo.classList.add("stock-positivo");
-  } else {
+  if (valor <= 0) {
     campo.classList.add("stock-cero-negativo");
+  } else {
+    campo.classList.add("stock-positivo");
   }
 }
-
 
 // =====================================================
 // MOSTRAR IMAGEN
@@ -419,7 +306,6 @@ function convertirDriveUrl(url) {
 
   return url;
 }
-
 
 // =====================================================
 // AGREGAR MATERIAL DESDE MODAL
@@ -463,9 +349,9 @@ function agregarMaterialDesdeModal() {
     cantidad: cantidad
   });
 
+  if (typeof marcarFormularioSucio === "function") marcarFormularioSucio();
   cerrarModalMaterial();
 }
-
 
 // =====================================================
 // AGREGAR MATERIAL A TABLA COMPACTA
@@ -503,19 +389,19 @@ function agregarMaterialATabla(tipo, material) {
 
   tr.innerHTML = `
     <td class="material-col-codigo">
-      ${material.codigo}
-      <input type="hidden" class="codigo-material" value="${material.codigo}">
+      ${escaparHTML(material.codigo)}
+      <input type="hidden" class="codigo-material" value="${escaparHTML(material.codigo)}">
     </td>
 
     <td class="material-col-nombre">
-      ${material.nombre}
-      <input type="hidden" class="nombre-material" value="${material.nombre}">
-      <input type="hidden" class="unidad-material" value="${material.unidad}">
+      ${escaparHTML(material.nombre)}
+      <input type="hidden" class="nombre-material" value="${escaparHTML(material.nombre)}">
+      <input type="hidden" class="unidad-material" value="${escaparHTML(material.unidad)}">
     </td>
 
     <td class="material-col-cantidad">
-      ${material.cantidad}
-      <input type="hidden" class="cantidad-material" value="${material.cantidad}">
+      ${escaparHTML(material.cantidad)}
+      <input type="hidden" class="cantidad-material" value="${escaparHTML(material.cantidad)}">
     </td>
 
     <td class="material-col-accion">
@@ -534,6 +420,7 @@ function eliminarFilaMaterial(btn) {
   const tbody = tabla.querySelector("tbody");
 
   fila.remove();
+  if (typeof marcarFormularioSucio === "function") marcarFormularioSucio();
 
   if (tbody.children.length === 0) {
     tabla.remove();
