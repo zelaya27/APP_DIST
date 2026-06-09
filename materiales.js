@@ -195,6 +195,7 @@ async function abrirModalMaterial(tipo) {
     document.getElementById("mat_existencia").value = "Cargando stock...";
     await cargarStockContexto(tipo);
     document.getElementById("mat_existencia").value = "";
+    actualizarColorExistencia(null);
   }
 }
 
@@ -208,6 +209,21 @@ function cerrarModalMaterial() {
 // =====================================================
 
 function limpiarModalMaterial() {
+  limpiarSeleccionMaterialCompleta();
+  llenarListasMateriales(materialesBD);
+}
+
+function limpiarCamposMaterialSeleccionado(limpiarCategoria) {
+  const categoriaActual = document.getElementById("mat_categoria").value;
+
+  limpiarSeleccionMaterialCompleta();
+
+  if (!limpiarCategoria) {
+    document.getElementById("mat_categoria").value = categoriaActual;
+  }
+}
+
+function limpiarSeleccionMaterialCompleta() {
   materialSeleccionadoActual = null;
 
   document.getElementById("mat_categoria").value = "";
@@ -218,23 +234,7 @@ function limpiarModalMaterial() {
   document.getElementById("mat_cantidad").value = "";
   document.getElementById("mat_observaciones").value = "";
   document.getElementById("mat_imagen_box").innerHTML = "Sin imagen disponible";
-
-  llenarListasMateriales(materialesBD);
-}
-
-function limpiarCamposMaterialSeleccionado(limpiarCategoria) {
-  materialSeleccionadoActual = null;
-
-  document.getElementById("mat_nombre").value = "";
-  document.getElementById("mat_codigo").value = "";
-  document.getElementById("mat_unidad").value = "";
-  document.getElementById("mat_existencia").value = "";
-  document.getElementById("mat_observaciones").value = "";
-  document.getElementById("mat_imagen_box").innerHTML = "Sin imagen disponible";
-
-  if (limpiarCategoria) {
-    document.getElementById("mat_categoria").value = "";
-  }
+  actualizarColorExistencia(null);
 }
 
 
@@ -245,6 +245,12 @@ function limpiarCamposMaterialSeleccionado(limpiarCategoria) {
 
 function buscarMaterialPorNombreEnVivo() {
   const nombre = document.getElementById("mat_nombre").value.trim();
+
+  if (!nombre) {
+    limpiarSeleccionMaterialCompleta();
+    llenarListasMateriales(materialesBD);
+    return;
+  }
 
   const material = materialesBD.find(m =>
     String(m.nombre).trim().toUpperCase() === nombre.toUpperCase()
@@ -257,6 +263,12 @@ function buscarMaterialPorNombreEnVivo() {
 
 function buscarMaterialPorCodigoEnVivo() {
   const codigo = document.getElementById("mat_codigo").value.trim();
+
+  if (!codigo) {
+    limpiarSeleccionMaterialCompleta();
+    llenarListasMateriales(materialesBD);
+    return;
+  }
 
   const material = materialesBD.find(m =>
     String(m.codigo).trim() === codigo
@@ -276,7 +288,11 @@ function buscarMaterialPorCodigoEnVivo() {
 function validarMaterialPorNombre() {
   const nombre = document.getElementById("mat_nombre").value.trim();
 
-  if (!nombre) return;
+  if (!nombre) {
+    limpiarSeleccionMaterialCompleta();
+    llenarListasMateriales(materialesBD);
+    return;
+  }
 
   const material = materialesBD.find(m =>
     String(m.nombre).trim().toUpperCase() === nombre.toUpperCase()
@@ -300,7 +316,11 @@ function validarMaterialPorNombre() {
 function validarMaterialPorCodigo() {
   const codigo = document.getElementById("mat_codigo").value.trim();
 
-  if (!codigo) return;
+  if (!codigo) {
+    limpiarSeleccionMaterialCompleta();
+    llenarListasMateriales(materialesBD);
+    return;
+  }
 
   const material = materialesBD.find(m =>
     String(m.codigo).trim() === codigo
@@ -334,6 +354,7 @@ function llenarMaterialSeleccionado(material) {
 
   const existencia = obtenerExistenciaLocal(material.codigo);
   document.getElementById("mat_existencia").value = existencia;
+  actualizarColorExistencia(existencia);
 }
 
 
@@ -349,6 +370,25 @@ function obtenerExistenciaLocal(codigo) {
   const existencia = Number(stock[String(codigo).trim()]) || 0;
 
   return existencia;
+}
+
+function actualizarColorExistencia(existencia) {
+  const campo = document.getElementById("mat_existencia");
+  if (!campo) return;
+
+  campo.classList.remove("stock-positivo", "stock-cero-negativo");
+
+  if (existencia === null || existencia === undefined || existencia === "") {
+    return;
+  }
+
+  const valor = Number(existencia);
+
+  if (valor > 0) {
+    campo.classList.add("stock-positivo");
+  } else {
+    campo.classList.add("stock-cero-negativo");
+  }
 }
 
 
