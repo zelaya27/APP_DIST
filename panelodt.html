@@ -219,6 +219,16 @@
       min-height:34px;
     }
 
+
+    .filtro-buscar-odt {
+      min-width:260px;
+      flex:1 1 280px;
+    }
+
+    .filtro-buscar-odt input {
+      min-width:220px;
+    }
+
     .input-filtro:focus {
       border-color:#60a5fa;
       box-shadow:0 0 0 2px rgba(96,165,250,.18);
@@ -512,12 +522,6 @@
         </select>
       </div>
 
-      <div class="filtro-grupo">
-        <label>Cuadrilla:</label>
-        <select id="filtroCuadrilla" class="input-filtro" onchange="renderizarTabla()">
-          <option value="ALL">Todas</option>
-        </select>
-      </div>
 
       <div class="filtro-grupo">
         <label>Razón:</label>
@@ -539,14 +543,9 @@
         <input type="date" id="fechaHasta" class="input-filtro" onchange="renderizarTabla()">
       </div>
 
-      <div class="filtro-grupo">
-        <label>Buscar ODT / texto:</label>
-        <input id="buscadorTexto" class="input-filtro" placeholder="ID, cuadrilla o razón..." oninput="renderizarTabla()">
-      </div>
-
-      <div class="filtro-grupo">
-        <label>Buscar reporte:</label>
-        <input id="buscadorReporte" class="input-filtro" placeholder="Reporte..." oninput="renderizarTabla()">
+      <div class="filtro-grupo filtro-buscar-odt">
+        <label>Buscar ODT:</label>
+        <input id="buscadorTexto" class="input-filtro" placeholder="Escriba ID ODT..." oninput="renderizarTabla()">
       </div>
 
       <button class="btn-limpiar" onclick="limpiarFiltros()"><i class="fas fa-times-circle"></i> Limpiar</button>
