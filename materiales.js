@@ -2,6 +2,23 @@ let materialesBD = [];
 let categoriasBD = [];
 let tipoMaterialActual = "";
 
+let stockCache = {
+  cuadrilla: {},
+  supervisor: {}
+};
+
+let stockCargado = {
+  cuadrilla: false,
+  supervisor: false
+};
+
+let materialSeleccionadoActual = null;
+
+// =====================================================
+// CARGAR BASE DE MATERIALES Y CATEGORÍAS
+// Se carga una sola vez al abrir la ODT
+// =====================================================
+
 async function cargarDatosMateriales() {
   try {
     const response = await fetch(CONFIG.URL_APPS_SCRIPT, {
@@ -17,6 +34,7 @@ async function cargarDatosMateriales() {
     if (data.status === "Éxito") {
       materialesBD = data.materiales || [];
       categoriasBD = data.categorias || [];
+
       llenarCategorias();
       llenarListasMateriales(materialesBD);
     } else {
@@ -28,6 +46,61 @@ async function cargarDatosMateriales() {
     alert("Error de conexión cargando materiales.");
   }
 }
+
+
+// =====================================================
+// CARGAR STOCK EN MEMORIA
+// Step 2 = cuadrilla
+// Step 3 = supervisor
+// =====================================================
+
+async function cargarStockContexto(tipo) {
+  const sector = sessionStorage.getItem("sector") || "";
+  const cuadrilla = document.getElementById("col_4") ? document.getElementById("col_4").value : "";
+
+  if (tipo === "cuadrilla" && !cuadrilla) {
+    stockCache.cuadrilla = {};
+    stockCargado.cuadrilla = false;
+    return false;
+  }
+
+  try {
+    const response = await fetch(CONFIG.URL_APPS_SCRIPT, {
+      method: "POST",
+      mode: "cors",
+      body: JSON.stringify({
+        action: "obtenerStockContexto",
+        tipo: tipo,
+        sector: sector,
+        cuadrilla: cuadrilla
+      })
+    });
+
+    const data = await response.json();
+
+    if (data.status === "Éxito") {
+      stockCache[tipo] = data.stock || {};
+      stockCargado[tipo] = true;
+      return true;
+    } else {
+      stockCache[tipo] = {};
+      stockCargado[tipo] = false;
+      console.warn("No se pudo cargar stock:", data.message);
+      return false;
+    }
+
+  } catch (error) {
+    console.error("Error cargando stock:", error);
+    stockCache[tipo] = {};
+    stockCargado[tipo] = false;
+    return false;
+  }
+}
+
+
+// =====================================================
+// LLENAR CATEGORÍAS
+// =====================================================
 
 function llenarCategorias() {
   const select = document.getElementById("mat_categoria");
@@ -44,6 +117,11 @@ function llenarCategorias() {
     }
   });
 }
+
+
+// =====================================================
+// LLENAR LISTAS DE NOMBRES Y CÓDIGOS
+// =====================================================
 
 function llenarListasMateriales(lista) {
   const listaNombres = document.getElementById("lista_nombres_materiales");
@@ -65,20 +143,42 @@ function llenarListasMateriales(lista) {
   });
 }
 
+
+// =====================================================
+// FILTRAR POR CATEGORÍA
+// =====================================================
+
 function filtrarMaterialesPorCategoria() {
   const categoria = document.getElementById("mat_categoria").value;
+
+  limpiarCamposMaterialSeleccionado(false);
 
   if (!categoria) {
     llenarListasMateriales(materialesBD);
     return;
   }
 
-  const filtrados = materialesBD.filter(m => String(m.categoria).trim() === String(categoria).trim());
+  const filtrados = materialesBD.filter(m =>
+    String(m.categoria).trim() === String(categoria).trim()
+  );
+
   llenarListasMateriales(filtrados);
 }
 
-function abrirModalMaterial(tipo) {
+
+// =====================================================
+// ABRIR MODAL MATERIAL
+// =====================================================
+
+async function abrirModalMaterial(tipo) {
   tipoMaterialActual = tipo;
+
+  const cuadrilla = document.getElementById("col_4") ? document.getElementById("col_4").value : "";
+
+  if (tipo === "cuadrilla" && !cuadrilla) {
+    alert("Debe seleccionar una cuadrilla en el Step 1 antes de agregar materiales.");
+    return;
+  }
 
   limpiarModalMaterial();
 
@@ -90,13 +190,26 @@ function abrirModalMaterial(tipo) {
     '<i class="fas fa-box"></i> ' + titulo;
 
   document.getElementById("modalMaterialBg").style.display = "flex";
+
+  if (!stockCargado[tipo]) {
+    document.getElementById("mat_existencia").value = "Cargando stock...";
+    await cargarStockContexto(tipo);
+    document.getElementById("mat_existencia").value = "";
+  }
 }
 
 function cerrarModalMaterial() {
   document.getElementById("modalMaterialBg").style.display = "none";
 }
 
+
+// =====================================================
+// LIMPIAR MODAL
+// =====================================================
+
 function limpiarModalMaterial() {
+  materialSeleccionadoActual = null;
+
   document.getElementById("mat_categoria").value = "";
   document.getElementById("mat_nombre").value = "";
   document.getElementById("mat_codigo").value = "";
@@ -109,23 +222,32 @@ function limpiarModalMaterial() {
   llenarListasMateriales(materialesBD);
 }
 
-function seleccionarMaterialPorCodigo() {
-  const codigo = document.getElementById("mat_codigo").value.trim();
+function limpiarCamposMaterialSeleccionado(limpiarCategoria) {
+  materialSeleccionadoActual = null;
 
-  const material = materialesBD.find(m =>
-    String(m.codigo).trim() === String(codigo).trim()
-  );
+  document.getElementById("mat_nombre").value = "";
+  document.getElementById("mat_codigo").value = "";
+  document.getElementById("mat_unidad").value = "";
+  document.getElementById("mat_existencia").value = "";
+  document.getElementById("mat_observaciones").value = "";
+  document.getElementById("mat_imagen_box").innerHTML = "Sin imagen disponible";
 
-  if (material) {
-    llenarMaterialSeleccionado(material);
+  if (limpiarCategoria) {
+    document.getElementById("mat_categoria").value = "";
   }
 }
 
-function seleccionarMaterialPorNombre() {
+
+// =====================================================
+// BÚSQUEDA EN VIVO
+// Si encuentra coincidencia exacta, llena datos al instante
+// =====================================================
+
+function buscarMaterialPorNombreEnVivo() {
   const nombre = document.getElementById("mat_nombre").value.trim();
 
   const material = materialesBD.find(m =>
-    String(m.nombre).trim().toUpperCase() === String(nombre).trim().toUpperCase()
+    String(m.nombre).trim().toUpperCase() === nombre.toUpperCase()
   );
 
   if (material) {
@@ -133,7 +255,75 @@ function seleccionarMaterialPorNombre() {
   }
 }
 
-async function llenarMaterialSeleccionado(material) {
+function buscarMaterialPorCodigoEnVivo() {
+  const codigo = document.getElementById("mat_codigo").value.trim();
+
+  const material = materialesBD.find(m =>
+    String(m.codigo).trim() === codigo
+  );
+
+  if (material) {
+    llenarMaterialSeleccionado(material);
+  }
+}
+
+
+// =====================================================
+// VALIDAR MATERIAL POR NOMBRE
+// No permite nombres fuera de la lista
+// =====================================================
+
+function validarMaterialPorNombre() {
+  const nombre = document.getElementById("mat_nombre").value.trim();
+
+  if (!nombre) return;
+
+  const material = materialesBD.find(m =>
+    String(m.nombre).trim().toUpperCase() === nombre.toUpperCase()
+  );
+
+  if (!material) {
+    alert("Debe seleccionar un material válido de la lista.");
+    limpiarCamposMaterialSeleccionado(true);
+    return;
+  }
+
+  llenarMaterialSeleccionado(material);
+}
+
+
+// =====================================================
+// VALIDAR MATERIAL POR CÓDIGO
+// No permite códigos fuera de la lista
+// =====================================================
+
+function validarMaterialPorCodigo() {
+  const codigo = document.getElementById("mat_codigo").value.trim();
+
+  if (!codigo) return;
+
+  const material = materialesBD.find(m =>
+    String(m.codigo).trim() === codigo
+  );
+
+  if (!material) {
+    alert("Debe seleccionar un código válido de la lista.");
+    limpiarCamposMaterialSeleccionado(true);
+    return;
+  }
+
+  llenarMaterialSeleccionado(material);
+}
+
+
+// =====================================================
+// LLENAR DATOS DEL MATERIAL SELECCIONADO
+// Se hace localmente desde memoria, sin consultar Apps Script
+// =====================================================
+
+function llenarMaterialSeleccionado(material) {
+  materialSeleccionadoActual = material;
+
   document.getElementById("mat_codigo").value = material.codigo || "";
   document.getElementById("mat_nombre").value = material.nombre || "";
   document.getElementById("mat_categoria").value = material.categoria || "";
@@ -142,8 +332,29 @@ async function llenarMaterialSeleccionado(material) {
 
   mostrarImagenMaterial(material.imagen || "");
 
-  await consultarExistenciaMaterial(material.codigo);
+  const existencia = obtenerExistenciaLocal(material.codigo);
+  document.getElementById("mat_existencia").value = existencia;
 }
+
+
+// =====================================================
+// CONSULTA DE EXISTENCIA LOCAL
+// Ya no consulta Apps Script cada vez que cambia material
+// =====================================================
+
+function obtenerExistenciaLocal(codigo) {
+  if (!tipoMaterialActual || !codigo) return 0;
+
+  const stock = stockCache[tipoMaterialActual] || {};
+  const existencia = Number(stock[String(codigo).trim()]) || 0;
+
+  return existencia;
+}
+
+
+// =====================================================
+// MOSTRAR IMAGEN
+// =====================================================
 
 function mostrarImagenMaterial(url) {
   const box = document.getElementById("mat_imagen_box");
@@ -169,43 +380,10 @@ function convertirDriveUrl(url) {
   return url;
 }
 
-async function consultarExistenciaMaterial(codigo) {
-  const cuadrilla = document.getElementById("col_4") ? document.getElementById("col_4").value : "";
-  const sector = sessionStorage.getItem("sector") || "";
 
-  if (!codigo) return;
-
-  if (tipoMaterialActual === "cuadrilla" && !cuadrilla) {
-    alert("Debe seleccionar una cuadrilla en el Step 1 para consultar existencia.");
-    return;
-  }
-
-  try {
-    const response = await fetch(CONFIG.URL_APPS_SCRIPT, {
-      method: "POST",
-      mode: "cors",
-      body: JSON.stringify({
-        action: "consultarStockMaterial",
-        tipo: tipoMaterialActual,
-        codigo: codigo,
-        cuadrilla: cuadrilla,
-        sector: sector
-      })
-    });
-
-    const data = await response.json();
-
-    if (data.status === "Éxito") {
-      document.getElementById("mat_existencia").value = data.existencia;
-    } else {
-      document.getElementById("mat_existencia").value = "0";
-    }
-
-  } catch (error) {
-    console.error(error);
-    document.getElementById("mat_existencia").value = "0";
-  }
-}
+// =====================================================
+// AGREGAR MATERIAL DESDE MODAL
+// =====================================================
 
 function agregarMaterialDesdeModal() {
   const codigo = document.getElementById("mat_codigo").value.trim();
@@ -213,6 +391,11 @@ function agregarMaterialDesdeModal() {
   const unidad = document.getElementById("mat_unidad").value.trim();
   const cantidad = Number(document.getElementById("mat_cantidad").value);
   const existencia = Number(document.getElementById("mat_existencia").value);
+
+  if (!materialSeleccionadoActual) {
+    alert("Debe seleccionar un material válido de la lista.");
+    return;
+  }
 
   if (!codigo || !nombre) {
     alert("Debe seleccionar un material.");
@@ -243,29 +426,76 @@ function agregarMaterialDesdeModal() {
   cerrarModalMaterial();
 }
 
+
+// =====================================================
+// AGREGAR MATERIAL A TABLA COMPACTA
+// =====================================================
+
 function agregarMaterialATabla(tipo, material) {
   const contenedor = tipo === "cuadrilla"
     ? document.getElementById("listaCuadrilla")
     : document.getElementById("listaSupervisor");
 
-  const div = document.createElement("div");
-  div.className = "material-card";
+  let tabla = contenedor.querySelector(".material-table");
 
-  div.innerHTML = `
-    <p><strong>Código:</strong> ${material.codigo}</p>
-    <p><strong>Material:</strong> ${material.nombre}</p>
-    <p><strong>Unidad:</strong> ${material.unidad}</p>
-    <p><strong>Cantidad:</strong> ${material.cantidad}</p>
+  if (!tabla) {
+    tabla = document.createElement("table");
+    tabla.className = "material-table";
 
-    <input type="hidden" class="codigo-material" value="${material.codigo}">
-    <input type="hidden" class="nombre-material" value="${material.nombre}">
-    <input type="hidden" class="unidad-material" value="${material.unidad}">
-    <input type="hidden" class="cantidad-material" value="${material.cantidad}">
+    tabla.innerHTML = `
+      <thead>
+        <tr>
+          <th>Código</th>
+          <th>Material</th>
+          <th>Cant.</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    `;
 
-    <button type="button" class="btn-delete" onclick="this.parentElement.remove()">
-      <i class="fas fa-trash"></i> Eliminar
-    </button>
+    contenedor.appendChild(tabla);
+  }
+
+  const tbody = tabla.querySelector("tbody");
+  const tr = document.createElement("tr");
+  tr.className = "material-card material-row";
+
+  tr.innerHTML = `
+    <td class="material-col-codigo">
+      ${material.codigo}
+      <input type="hidden" class="codigo-material" value="${material.codigo}">
+    </td>
+
+    <td class="material-col-nombre">
+      ${material.nombre}
+      <input type="hidden" class="nombre-material" value="${material.nombre}">
+      <input type="hidden" class="unidad-material" value="${material.unidad}">
+    </td>
+
+    <td class="material-col-cantidad">
+      ${material.cantidad}
+      <input type="hidden" class="cantidad-material" value="${material.cantidad}">
+    </td>
+
+    <td class="material-col-accion">
+      <button type="button" class="btn-trash-mini" onclick="eliminarFilaMaterial(this)">
+        <i class="fas fa-trash"></i>
+      </button>
+    </td>
   `;
 
-  contenedor.appendChild(div);
+  tbody.appendChild(tr);
+}
+
+function eliminarFilaMaterial(btn) {
+  const fila = btn.closest("tr");
+  const tabla = btn.closest("table");
+  const tbody = tabla.querySelector("tbody");
+
+  fila.remove();
+
+  if (tbody.children.length === 0) {
+    tabla.remove();
+  }
 }
