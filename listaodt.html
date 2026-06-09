@@ -188,10 +188,32 @@
     }
 
     .btn-filtro.activo {
-      background:var(--blue-active);
-      color:#05111f;
-      border-color:#93c5fd;
-      box-shadow:0 0 12px rgba(96,165,250,.55);
+      color:#ffffff;
+      font-weight:900;
+    }
+
+    .btn-filtro.activo[data-estado="Todas"] {
+      background:#334155;
+      border-color:#64748b;
+      box-shadow:0 0 12px rgba(100,116,139,.55);
+    }
+
+    .btn-filtro.activo[data-estado="Pendiente"] {
+      background:#e74c3c;
+      border-color:#ff6b6b;
+      box-shadow:0 0 12px rgba(231,76,60,.55);
+    }
+
+    .btn-filtro.activo[data-estado="Terminado"] {
+      background:#27ae60;
+      border-color:#2ecc71;
+      box-shadow:0 0 12px rgba(39,174,96,.55);
+    }
+
+    .btn-filtro.activo[data-estado="Auditado"] {
+      background:#1e40af;
+      border-color:#3b82f6;
+      box-shadow:0 0 12px rgba(59,130,246,.55);
     }
 
     .mostrar-contenedor {
@@ -331,6 +353,28 @@
     }
 
     .btn-card:disabled i { color:#94a3b8; }
+
+    .btn-pdf {
+      color:#ff6b6b !important;
+      border-color:#ff6b6b !important;
+    }
+
+    .btn-pdf i {
+      color:#ff6b6b !important;
+    }
+
+    .btn-pdf:hover,
+    .btn-pdf:active {
+      background:#e74c3c !important;
+      color:#ffffff !important;
+      border-color:#e74c3c !important;
+      box-shadow:0 0 10px rgba(231,76,60,.45) !important;
+    }
+
+    .btn-pdf:hover i,
+    .btn-pdf:active i {
+      color:#ffffff !important;
+    }
 
     .badge {
       padding:5px 11px;
@@ -554,12 +598,12 @@
 
           <div class="registro-body">
             <p><i class="far fa-calendar-alt"></i> <b>Fecha:</b> ${escaparHTML(fecha)}</p>
-            <p><i class="fas fa-user-helmet-safety"></i> <b>Cuadrilla:</b> ${escaparHTML(row.col_4 || "N/A")}</p>
+            <p><i class="fas fa-users"></i> <b>Cuadrilla:</b> ${escaparHTML(row.col_4 || "N/A")}</p>
             <p><i class="fas fa-clipboard-list"></i> <b>Razón:</b> ${escaparHTML(row.col_8 || "N/A")}</p>
           </div>
 
           <div class="registro-footer">
-            <button class="btn-card" type="button" onclick="verPDF('${escaparAtributo(row.col_0 || "")}', '${escaparAtributo(pdfUrl)}')">
+            <button class="btn-card btn-pdf" type="button" onclick="verPDF('${escaparAtributo(row.col_0 || "")}', '${escaparAtributo(pdfUrl)}')">
               <i class="fas fa-file-pdf"></i> PDF
             </button>
 
