@@ -1,6 +1,10 @@
 let pasoActual = 1;
 const totalPasos = 3;
 
+// Guarda temporalmente los campos que solo se muestran dentro del modal
+const datosModalODT = {};
+let cuadrillaAnterior = "";
+
 document.addEventListener("DOMContentLoaded", function() {
   const usuario = sessionStorage.getItem("usuario");
   const sector = sessionStorage.getItem("sector");
@@ -54,6 +58,9 @@ function fechaHoy() {
 // =====================================================
 // CARGAR CUADRILLAS DESDE APPS SCRIPT
 // Hoja: codigo_validaciones / cuadrillas / Col1
+// Regla:
+// - tipo_usuario 3: autocompleta cuadrilla de usuarios Col5 y bloquea
+// - tipo_usuario 1 y 2: deja lista desplegable habilitada
 // =====================================================
 
 async function cargarCuadrillas() {
@@ -61,6 +68,10 @@ async function cargarCuadrillas() {
 
   if (!select) return;
 
+  const tipoUsuario = String(sessionStorage.getItem("tipo_usuario") || "").trim();
+  const cuadrillaUsuario = String(sessionStorage.getItem("cuadrilla") || "").trim();
+
+  select.disabled = false;
   select.innerHTML = '<option value="">Cargando cuadrillas...</option>';
 
   try {
@@ -87,11 +98,69 @@ async function cargarCuadrillas() {
       alert("No se encontraron cuadrillas.");
     }
 
+    if (tipoUsuario === "3") {
+      if (cuadrillaUsuario) {
+        asegurarOpcionSelect(select, cuadrillaUsuario);
+        select.value = cuadrillaUsuario;
+        cuadrillaAnterior = cuadrillaUsuario;
+        await cargarStockContexto("cuadrilla");
+      }
+
+      select.disabled = true;
+    } else {
+      select.disabled = false;
+      cuadrillaAnterior = select.value || "";
+    }
+
   } catch (error) {
     console.error("Error cargando cuadrillas:", error);
     select.innerHTML = '<option value="">Error cargando cuadrillas</option>';
     alert("Error de conexión cargando cuadrillas.");
   }
+}
+
+function asegurarOpcionSelect(select, valor) {
+  const existe = Array.from(select.options).some(opt => opt.value === valor);
+
+  if (!existe && valor) {
+    const option = document.createElement("option");
+    option.value = valor;
+    option.textContent = valor;
+    select.appendChild(option);
+  }
+}
+
+// =====================================================
+// CAMBIO DE CUADRILLA
+// Si ya hay materiales de cuadrilla agregados, confirma y limpia
+// =====================================================
+
+async function manejarCambioCuadrilla() {
+  const select = document.getElementById("col_4");
+  const nuevaCuadrilla = select ? select.value : "";
+  const lista = document.getElementById("listaCuadrilla");
+  const tieneMateriales = lista && lista.querySelector(".material-card");
+
+  if (tieneMateriales && nuevaCuadrilla !== cuadrillaAnterior) {
+    const confirmar = confirm(
+      "Cambió la cuadrilla seleccionada.\n\n" +
+      "Esto limpiará los materiales ya agregados en el Step 2 para evitar consumos con stock incorrecto.\n\n" +
+      "¿Desea continuar?"
+    );
+
+    if (!confirmar) {
+      select.value = cuadrillaAnterior;
+      return;
+    }
+
+    lista.innerHTML = "";
+  }
+
+  cuadrillaAnterior = nuevaCuadrilla;
+  stockCargado.cuadrilla = false;
+  stockCache.cuadrilla = {};
+
+  await cargarStockContexto("cuadrilla");
 }
 
 
@@ -170,17 +239,46 @@ function abrirModal(tipo) {
 }
 
 function campoModal(label, id, type = "text") {
-  const valor = document.getElementById(id) ? document.getElementById(id).value : "";
+  const valor = obtenerValorCampoODT(id);
 
   return `
     <div class="form-group" style="margin-bottom:12px;">
       <label>${label}</label>
-      <input type="${type}" id="${id}" value="${valor}">
+      <input type="${type}" id="${id}" value="${escaparHTML(valor)}" oninput="guardarDatoModal('${id}', this.value)">
     </div>
   `;
 }
 
+function obtenerValorCampoODT(id) {
+  const campo = document.getElementById(id);
+  if (campo) return campo.value || "";
+  return datosModalODT[id] || "";
+}
+
+function guardarDatoModal(id, valor) {
+  datosModalODT[id] = valor;
+}
+
+function sincronizarDatosModalAbierto() {
+  for (let i = 14; i <= 25; i++) {
+    const id = "col_" + i;
+    const campo = document.getElementById(id);
+    if (campo) {
+      datosModalODT[id] = campo.value || "";
+    }
+  }
+}
+
+function escaparHTML(valor) {
+  return String(valor || "")
+    .replace(/&/g, "&amp;")
+    .replace(/"/g, "&quot;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}
+
 function cerrarModal() {
+  sincronizarDatosModalAbierto();
   document.getElementById("modalBg").style.display = "none";
 }
 
@@ -217,6 +315,51 @@ function obtenerMateriales(tipo) {
 
 
 // =====================================================
+// VALIDACIONES ANTES DE GUARDAR
+// =====================================================
+
+function validarAntesGuardar() {
+  const cuadrilla = document.getElementById("col_4").value.trim();
+  const razonTrabajo = document.getElementById("col_8").value.trim();
+  const trabajoRealizado = document.getElementById("col_9").value.trim();
+
+  if (!cuadrilla) {
+    alert("Debe seleccionar una cuadrilla.");
+    pasoActual = 1;
+    mostrarPasoActual();
+    document.getElementById("col_4").focus();
+    return false;
+  }
+
+  if (!razonTrabajo) {
+    alert("Debe seleccionar la razón de trabajo.");
+    pasoActual = 1;
+    mostrarPasoActual();
+    document.getElementById("col_8").focus();
+    return false;
+  }
+
+  if (!trabajoRealizado) {
+    alert("Debe ingresar el trabajo realizado.");
+    pasoActual = 1;
+    mostrarPasoActual();
+    document.getElementById("col_9").focus();
+    return false;
+  }
+
+  return true;
+}
+
+function mostrarPasoActual() {
+  for (let i = 1; i <= totalPasos; i++) {
+    document.getElementById("step-" + i).classList.toggle("activo", i === pasoActual);
+    document.getElementById("ind-" + i).classList.toggle("active", i === pasoActual);
+  }
+  actualizarBotones();
+}
+
+
+// =====================================================
 // GUARDAR ODT COMPLETA
 // Guarda:
 // - Datos generales en hoja odt
@@ -225,6 +368,10 @@ function obtenerMateriales(tipo) {
 // =====================================================
 
 async function guardarODT() {
+  if (!validarAntesGuardar()) return;
+
+  sincronizarDatosModalAbierto();
+
   const btn = document.getElementById("btnGuardar");
 
   btn.disabled = true;
@@ -244,7 +391,7 @@ async function guardarODT() {
   // Ahora la hoja odt llega de Col0 a Col33
   for (let i = 0; i <= 33; i++) {
     const campo = document.getElementById("col_" + i);
-    odt["col_" + i] = campo ? campo.value : "";
+    odt["col_" + i] = campo ? campo.value : (datosModalODT["col_" + i] || "");
   }
 
   const datos = {
