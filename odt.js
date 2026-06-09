@@ -1,5 +1,5 @@
 let pasoActual = 1;
-const totalPasos = 3;
+const totalPasos = 4;
 
 const datosModalODT = {};
 let cuadrillaAnterior = "";
@@ -7,11 +7,13 @@ let numeroCuadrillaAnterior = "";
 let cuadrillasBD = [];
 let formularioSucio = false;
 let guardadoCorrecto = false;
+let idODTGuardada = "";
+let urlPDFGenerado = "";
 
 const razonesTrabajoBD = [
-  "Incidencia de Zona",
-  "Incidencia Acometida/Medidor",
-  "Mantenimiento"
+  "INCIDENCIAS",
+  "OPERACIONES",
+  "MANTENIMIENTO"
 ];
 
 let selectorGlobal = {
@@ -328,7 +330,9 @@ function pasoAnterior() {
 function actualizarBotones() {
   document.getElementById("btnAnterior").style.display = pasoActual === 1 ? "none" : "block";
   document.getElementById("btnSiguiente").style.display = pasoActual === totalPasos ? "none" : "block";
-  document.getElementById("btnGuardar").style.display = pasoActual === totalPasos ? "block" : "none";
+
+  const btnGuardarFooter = document.getElementById("btnGuardar");
+  if (btnGuardarFooter) btnGuardarFooter.style.display = "none";
 }
 
 // =====================================================
@@ -487,9 +491,19 @@ async function guardarODT() {
 
   sincronizarDatosModalAbierto();
 
-  const btn = document.getElementById("btnGuardar");
-  btn.disabled = true;
-  btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Guardando...';
+  const btn = document.getElementById("btnGuardarStep4") || document.getElementById("btnGuardar");
+  const mensaje = document.getElementById("mensajeGuardadoStep4");
+  const btnPDF = document.getElementById("btnDescargarPDF");
+  const linkPDF = document.getElementById("linkPDFGenerado");
+
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Guardando...';
+  }
+
+  if (mensaje) mensaje.style.display = "none";
+  if (btnPDF) btnPDF.style.display = "none";
+  if (linkPDF) linkPDF.style.display = "none";
 
   if (document.getElementById("col_12").value.trim()) convertirGpsManual();
 
@@ -499,7 +513,7 @@ async function guardarODT() {
 
   const odt = {};
 
-  for (let i = 0; i <= 34; i++) {
+  for (let i = 0; i <= 35; i++) {
     const campo = document.getElementById("col_" + i);
     odt["col_" + i] = campo ? campo.value : (datosModalODT["col_" + i] || "");
   }
@@ -523,8 +537,17 @@ async function guardarODT() {
     if (data.status === "Éxito") {
       guardadoCorrecto = true;
       formularioSucio = false;
-      alert("ODT guardada correctamente: " + data.id);
-      window.location.href = "menu.html";
+      idODTGuardada = data.id || document.getElementById("col_0").value;
+
+      if (mensaje) {
+        mensaje.innerHTML = '<i class="fas fa-check-circle"></i> ODT guardada correctamente: ' + escaparHTML(idODTGuardada);
+        mensaje.style.display = "block";
+      }
+
+      if (btnPDF) btnPDF.style.display = "block";
+      alert("ODT guardada correctamente: " + idODTGuardada);
+      pasoActual = 4;
+      mostrarPasoActual();
     } else {
       alert("Error: " + (data.message || "No se pudo guardar."));
     }
@@ -533,7 +556,81 @@ async function guardarODT() {
     console.error(error);
     alert("Error de conexión al guardar.");
   } finally {
-    btn.disabled = false;
-    btn.innerHTML = "Guardar";
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = '<i class="fas fa-save"></i> Guardar datos';
+    }
+  }
+}
+
+
+// =====================================================
+// GENERAR / DESCARGAR PDF ODT
+// Se abre por acción directa del usuario para evitar bloqueo del navegador
+// =====================================================
+
+async function generarPDFODT() {
+  const idODT = idODTGuardada || document.getElementById("col_0").value.trim();
+  const btn = document.getElementById("btnDescargarPDF");
+  const linkPDF = document.getElementById("linkPDFGenerado");
+
+  if (!guardadoCorrecto || !idODT) {
+    alert("Primero debe guardar la ODT correctamente.");
+    return;
+  }
+
+  // Se abre inmediatamente por el toque del usuario. Luego se asigna la URL real.
+  const ventanaPDF = window.open("about:blank", "_blank");
+  if (ventanaPDF) {
+    ventanaPDF.document.write("<p style='font-family:Arial;padding:20px;'>Generando PDF, por favor espere...</p>");
+  }
+
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generando PDF...';
+  }
+
+  try {
+    const response = await fetch(CONFIG.URL_APPS_SCRIPT, {
+      method: "POST",
+      mode: "cors",
+      body: JSON.stringify({
+        action: "generarPDFODT",
+        idODT: idODT
+      })
+    });
+
+    const data = await response.json();
+
+    if (data.status === "Éxito" && data.url) {
+      urlPDFGenerado = data.url;
+      const campoPDF = document.getElementById("col_35");
+      if (campoPDF) campoPDF.value = data.url;
+
+      if (linkPDF) {
+        linkPDF.href = data.url;
+        linkPDF.style.display = "block";
+        linkPDF.innerHTML = '<i class="fas fa-up-right-from-square"></i> Abrir PDF generado';
+      }
+
+      if (ventanaPDF) {
+        ventanaPDF.location.href = data.url;
+      } else {
+        alert("PDF generado correctamente. Use el enlace 'Abrir PDF generado'.");
+      }
+    } else {
+      if (ventanaPDF) ventanaPDF.close();
+      alert("Error generando PDF: " + (data.message || "No se pudo generar."));
+    }
+
+  } catch (error) {
+    console.error(error);
+    if (ventanaPDF) ventanaPDF.close();
+    alert("Error de conexión al generar PDF.");
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = '<i class="fas fa-file-pdf"></i> Descargar PDF';
+    }
   }
 }
