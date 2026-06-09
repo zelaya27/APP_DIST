@@ -70,7 +70,6 @@ async function cargarPanelODT() {
     }
 
     registrosPanel = data.odts || [];
-    poblarFiltroCuadrillas();
     actualizarResumen();
     renderizarTabla();
 
@@ -78,31 +77,6 @@ async function cargarPanelODT() {
     console.error(error);
     tbody.innerHTML = '<tr><td colspan="6" class="mensaje-tabla mensaje-error"><i class="fas fa-exclamation-triangle"></i> Error cargando Panel ODT: ' + escaparHTML(error.message) + '</td></tr>';
   }
-}
-
-function poblarFiltroCuadrillas() {
-  const select = document.getElementById("filtroCuadrilla");
-  const actual = select.value || "ALL";
-  const mapa = {};
-
-  registrosPanel.forEach(function(row) {
-    const nombre = String(row.col_4 || "").trim();
-    if (nombre) mapa[nombre] = true;
-  });
-
-  const cuadrillas = Object.keys(mapa).sort(function(a, b) {
-    return a.localeCompare(b, "es");
-  });
-
-  select.innerHTML = '<option value="ALL">Todas</option>';
-  cuadrillas.forEach(function(nombre) {
-    const opt = document.createElement("option");
-    opt.value = nombre;
-    opt.textContent = nombre;
-    select.appendChild(opt);
-  });
-
-  select.value = cuadrillas.includes(actual) ? actual : "ALL";
 }
 
 // =====================================================
@@ -150,39 +124,27 @@ function setTexto(id, valor) {
 
 function obtenerDatosFiltrados() {
   const estado = document.getElementById("filtroEstado").value;
-  const cuadrilla = document.getElementById("filtroCuadrilla").value;
   const razon = document.getElementById("filtroRazon").value;
   const fechaDesde = document.getElementById("fechaDesde").value;
   const fechaHasta = document.getElementById("fechaHasta").value;
   const texto = normalizarTexto(document.getElementById("buscadorTexto").value || "");
-  const reporte = normalizarTexto(document.getElementById("buscadorReporte").value || "");
 
   let datos = registrosPanel.slice();
 
   datos = datos.filter(function(row) {
     const estadoFila = normalizarTexto(row.col_3 || "Pendiente");
-    const cuadrillaFila = String(row.col_4 || "").trim();
     const razonFila = normalizarTexto(row.col_8 || "");
     const fechaISO = String(row.fecha_iso || "").trim();
-    const reporteFila = normalizarTexto(row.col_26 || "");
 
     if (estado !== "ALL" && estadoFila !== estado) return false;
-    if (cuadrilla !== "ALL" && cuadrillaFila !== cuadrilla) return false;
     if (razon !== "ALL" && razonFila !== razon) return false;
     if (fechaDesde && fechaISO && fechaISO < fechaDesde) return false;
     if (fechaHasta && fechaISO && fechaISO > fechaHasta) return false;
 
     if (texto) {
-      const busqueda = normalizarTexto([
-        row.col_0,
-        row.col_4,
-        row.col_8,
-        row.col_1
-      ].join(" "));
-      if (!busqueda.includes(texto)) return false;
+      const idODT = normalizarTexto(row.col_0 || "");
+      if (!idODT.includes(texto)) return false;
     }
-
-    if (reporte && !reporteFila.includes(reporte)) return false;
 
     return true;
   });
@@ -193,7 +155,7 @@ function obtenerDatosFiltrados() {
 function renderizarTabla() {
   const tbody = document.getElementById("tablaODT");
   const limitSelector = document.getElementById("limitSelector");
-  const reporteBuscado = String(document.getElementById("buscadorReporte").value || "").trim();
+  const odtBuscada = String(document.getElementById("buscadorTexto").value || "").trim();
 
   let datos = obtenerDatosFiltrados();
 
@@ -208,8 +170,8 @@ function renderizarTabla() {
   tbody.innerHTML = "";
 
   if (datos.length === 0) {
-    const mensaje = reporteBuscado
-      ? "No se encontró el reporte."
+    const mensaje = odtBuscada
+      ? "No se encontró la ODT."
       : "No hay ODT para mostrar con los filtros seleccionados.";
 
     tbody.innerHTML = '<tr><td colspan="6" class="mensaje-tabla">' + escaparHTML(mensaje) + '</td></tr>';
@@ -284,12 +246,10 @@ function obtenerClaseEstadoSelect(estado) {
 function limpiarFiltros() {
   document.getElementById("limitSelector").value = "10";
   document.getElementById("filtroEstado").value = "ALL";
-  document.getElementById("filtroCuadrilla").value = "ALL";
   document.getElementById("filtroRazon").value = "ALL";
   document.getElementById("fechaDesde").value = "";
   document.getElementById("fechaHasta").value = "";
   document.getElementById("buscadorTexto").value = "";
-  document.getElementById("buscadorReporte").value = "";
   renderizarTabla();
 }
 
