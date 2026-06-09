@@ -1,3 +1,23 @@
+// =====================================================
+// GPS / UTM - APP DIST
+// Este archivo controla:
+// - Obtener ubicación actual
+// - Convertir GPS a UTM
+// - Convertir UTM X/Y a GPS
+//
+// En odt.html:
+// col_12 = GPS
+// col_13 = UTM completo guardado internamente
+// utm_x  = Coordenada UTM X visible
+// utm_y  = Coordenada UTM Y visible
+// =====================================================
+
+
+// =====================================================
+// CONFIRMAR SI DESEA OBTENER GPS
+// Evita borrar coordenadas ya ingresadas por error
+// =====================================================
+
 function confirmarObtenerGPS() {
   const confirmar = confirm("¿Desea obtener la ubicación actual?\n\nSi ya tiene coordenadas escritas, serán reemplazadas.");
 
@@ -5,6 +25,12 @@ function confirmarObtenerGPS() {
     obtenerGPS();
   }
 }
+
+
+// =====================================================
+// OBTENER GPS DEL DISPOSITIVO
+// Llena GPS, UTM X, UTM Y y UTM completo
+// =====================================================
 
 function obtenerGPS() {
   if (!navigator.geolocation) {
@@ -17,13 +43,13 @@ function obtenerGPS() {
       const lat = pos.coords.latitude;
       const lon = pos.coords.longitude;
 
-      document.getElementById("col_11").value = lat.toFixed(6) + ", " + lon.toFixed(6);
+      document.getElementById("col_12").value = lat.toFixed(6) + ", " + lon.toFixed(6);
 
       const utm = latLonToUTMObj(lat, lon);
 
       document.getElementById("utm_x").value = utm.easting;
       document.getElementById("utm_y").value = utm.northing;
-      document.getElementById("col_12").value = "16N " + utm.easting + " " + utm.northing;
+      document.getElementById("col_13").value = "16N " + utm.easting + " " + utm.northing;
     },
     function(error) {
       alert("No se pudo obtener la ubicación exacta. Active permisos de ubicación y GPS.");
@@ -36,8 +62,15 @@ function obtenerGPS() {
   );
 }
 
+
+// =====================================================
+// CONVERTIR GPS MANUAL A UTM
+// Formato esperado: latitud, longitud
+// Ejemplo: 14.081800, -87.206800
+// =====================================================
+
 function convertirGpsManual() {
-  const valor = document.getElementById("col_11").value.trim();
+  const valor = document.getElementById("col_12").value.trim();
 
   if (!valor) {
     limpiarUTM();
@@ -65,16 +98,22 @@ function convertirGpsManual() {
 
   document.getElementById("utm_x").value = utm.easting;
   document.getElementById("utm_y").value = utm.northing;
-  document.getElementById("col_12").value = "16N " + utm.easting + " " + utm.northing;
+  document.getElementById("col_13").value = "16N " + utm.easting + " " + utm.northing;
 }
+
+
+// =====================================================
+// CONVERTIR UTM X/Y MANUAL A GPS
+// Zona fija: 16N
+// =====================================================
 
 function convertirUtmXYManual() {
   const valorX = document.getElementById("utm_x").value.trim();
   const valorY = document.getElementById("utm_y").value.trim();
 
   if (!valorX && !valorY) {
-    document.getElementById("col_11").value = "";
     document.getElementById("col_12").value = "";
+    document.getElementById("col_13").value = "";
     return;
   }
 
@@ -87,32 +126,43 @@ function convertirUtmXYManual() {
 
   if (isNaN(x) || isNaN(y)) {
     alert("UTM inválido. Debe ingresar valores numéricos en X y Y.");
-    document.getElementById("col_11").value = "";
     document.getElementById("col_12").value = "";
+    document.getElementById("col_13").value = "";
     return;
   }
 
   if (x < 100000 || x > 900000 || y < 0 || y > 10000000) {
     alert("Coordenadas UTM inválidas. Revise X y Y.");
-    document.getElementById("col_11").value = "";
     document.getElementById("col_12").value = "";
+    document.getElementById("col_13").value = "";
     return;
   }
 
   const resultado = utmToLatLon("16N", x, y);
 
-  document.getElementById("col_11").value =
+  document.getElementById("col_12").value =
     resultado.lat.toFixed(6) + ", " + resultado.lon.toFixed(6);
 
-  document.getElementById("col_12").value =
+  document.getElementById("col_13").value =
     "16N " + Math.round(x) + " " + Math.round(y);
 }
+
+
+// =====================================================
+// LIMPIAR CAMPOS UTM
+// =====================================================
 
 function limpiarUTM() {
   document.getElementById("utm_x").value = "";
   document.getElementById("utm_y").value = "";
-  document.getElementById("col_12").value = "";
+  document.getElementById("col_13").value = "";
 }
+
+
+// =====================================================
+// CONVERSIÓN LAT/LON A UTM
+// Zona fija 16N para Honduras / sector de trabajo
+// =====================================================
 
 function latLonToUTMObj(lat, lon) {
   const a = 6378137;
@@ -161,6 +211,12 @@ function latLonToUTMObj(lat, lon) {
     northing: Math.round(northing)
   };
 }
+
+
+// =====================================================
+// CONVERSIÓN UTM A LAT/LON
+// Zona fija esperada: 16N
+// =====================================================
 
 function utmToLatLon(zona, easting, northing) {
   const a = 6378137;
