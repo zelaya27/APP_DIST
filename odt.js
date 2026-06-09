@@ -184,6 +184,9 @@ function abrirSelectorGlobal(titulo, items, onSelect) {
     onSelect: onSelect
   };
 
+  const searchBox = document.querySelector(".selector-search-box");
+  if (searchBox) searchBox.style.display = "flex";
+
   document.getElementById("selectorTitulo").innerHTML = '<i class="fas fa-list"></i> ' + escaparHTML(titulo);
   document.getElementById("selectorBuscador").value = "";
   document.getElementById("selectorModalBg").style.display = "flex";
@@ -197,6 +200,8 @@ function abrirSelectorGlobal(titulo, items, onSelect) {
 }
 
 function cerrarSelectorGlobal() {
+  const searchBox = document.querySelector(".selector-search-box");
+  if (searchBox) searchBox.style.display = "flex";
   document.getElementById("selectorModalBg").style.display = "none";
 }
 
@@ -367,16 +372,63 @@ async function manejarCambioCuadrilla() {
 
 // =====================================================
 // RAZÓN DE TRABAJO
+// Modal simple sin buscador para uso rápido en celular
 // =====================================================
 
 function abrirSelectorRazonTrabajo() {
-  const items = razonesTrabajoBD.map(function(r) {
-    return { texto: r, data: r };
-  });
+  selectorGlobal = {
+    titulo: "Razón de trabajo",
+    items: [],
+    onSelect: null
+  };
 
-  abrirSelectorGlobal("Razón de trabajo", items, function(item) {
-    document.getElementById("col_8").value = item.data;
-  });
+  const modal = document.getElementById("selectorModalBg");
+  const titulo = document.getElementById("selectorTitulo");
+  const lista = document.getElementById("selectorLista");
+  const searchBox = document.querySelector(".selector-search-box");
+
+  if (titulo) {
+    titulo.innerHTML = '<i class="fas fa-clipboard-list"></i> Razón de trabajo';
+  }
+
+  // Para este campo no se usa buscador. Solo selección directa.
+  if (searchBox) {
+    searchBox.style.display = "none";
+  }
+
+  if (lista) {
+    lista.innerHTML = "";
+
+    razonesTrabajoBD.forEach(function(opcion) {
+      const div = document.createElement("div");
+      div.className = "selector-item selector-item-simple";
+      div.textContent = opcion;
+
+      div.addEventListener("touchstart", function() {
+        marcarFilaSelectorActiva(div);
+      }, { passive: true });
+
+      div.addEventListener("mousedown", function() {
+        marcarFilaSelectorActiva(div);
+      });
+
+      div.addEventListener("click", function() {
+        marcarFilaSelectorActiva(div);
+
+        setTimeout(function() {
+          document.getElementById("col_8").value = opcion;
+          cerrarSelectorGlobal();
+          marcarFormularioSucio();
+        }, 80);
+      });
+
+      lista.appendChild(div);
+    });
+  }
+
+  if (modal) {
+    modal.style.display = "flex";
+  }
 }
 
 // =====================================================
@@ -663,24 +715,33 @@ async function guardarODT() {
 
 
 // =====================================================
-// GENERAR / DESCARGAR PDF ODT
-// Se abre por acción directa del usuario para evitar bloqueo del navegador
+// GENERAR PDF ODT
+// Permanece en Step 4 y NO abre pestañas en blanco.
+// Cuando termina, habilita el enlace para abrir el PDF.
 // =====================================================
 
 async function generarPDFODT() {
   const idODT = idODTGuardada || document.getElementById("col_0").value.trim();
   const btn = document.getElementById("btnDescargarPDF");
   const linkPDF = document.getElementById("linkPDFGenerado");
+  const mensaje = document.getElementById("mensajeGuardadoStep4");
 
   if (!guardadoCorrecto || !idODT) {
     alert("Primero debe guardar la ODT correctamente.");
     return;
   }
 
-  // Se abre inmediatamente por el toque del usuario. Luego se asigna la URL real.
-  const ventanaPDF = window.open("about:blank", "_blank");
-  if (ventanaPDF) {
-    ventanaPDF.document.write("<p style='font-family:Arial;padding:20px;'>Generando PDF, por favor espere...</p>");
+  pasoActual = 4;
+  mostrarPasoActual();
+
+  if (linkPDF) {
+    linkPDF.style.display = "none";
+    linkPDF.removeAttribute("href");
+  }
+
+  if (mensaje) {
+    mensaje.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generando PDF...';
+    mensaje.style.display = "block";
   }
 
   if (btn) {
@@ -702,33 +763,39 @@ async function generarPDFODT() {
 
     if (data.status === "Éxito" && data.url) {
       urlPDFGenerado = data.url;
+
       const campoPDF = document.getElementById("col_35");
       if (campoPDF) campoPDF.value = data.url;
+
+      if (mensaje) {
+        mensaje.innerHTML = '<i class="fas fa-check-circle"></i> PDF generado exitosamente';
+        mensaje.style.display = "block";
+      }
 
       if (linkPDF) {
         linkPDF.href = data.url;
         linkPDF.style.display = "block";
         linkPDF.innerHTML = '<i class="fas fa-up-right-from-square"></i> Abrir PDF generado';
       }
-
-      if (ventanaPDF) {
-        ventanaPDF.location.href = data.url;
-      } else {
-        alert("PDF generado correctamente. Use el enlace 'Abrir PDF generado'.");
-      }
     } else {
-      if (ventanaPDF) ventanaPDF.close();
+      if (mensaje) {
+        mensaje.innerHTML = '<i class="fas fa-triangle-exclamation"></i> Error generando PDF';
+        mensaje.style.display = "block";
+      }
       alert("Error generando PDF: " + (data.message || "No se pudo generar."));
     }
 
   } catch (error) {
     console.error(error);
-    if (ventanaPDF) ventanaPDF.close();
+    if (mensaje) {
+      mensaje.innerHTML = '<i class="fas fa-triangle-exclamation"></i> Error de conexión al generar PDF';
+      mensaje.style.display = "block";
+    }
     alert("Error de conexión al generar PDF.");
   } finally {
     if (btn) {
       btn.disabled = false;
-      btn.innerHTML = '<i class="fas fa-file-pdf"></i> Descargar PDF';
+      btn.innerHTML = '<i class="fas fa-file-pdf"></i> Generar PDF';
     }
   }
 }
