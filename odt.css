@@ -492,3 +492,116 @@ input[readonly] {
   margin-top:4px;
   margin-bottom:15px;
 }
+
+
+/* =========================================
+   INDICADORES DE PASOS EN CABECERA
+========================================= */
+
+header .steps-header {
+  margin:0 0 0 auto;
+  padding:0;
+  background:transparent;
+  border:none;
+  border-radius:0;
+  display:flex;
+  justify-content:flex-end;
+  align-items:center;
+  gap:7px;
+  flex:0 0 auto;
+}
+
+header .steps-header .step-indicator {
+  flex:0 0 auto;
+  width:auto;
+  font-size:0;
+  color:transparent;
+}
+
+header .steps-header .step-circle {
+  width:26px;
+  height:26px;
+  margin:0;
+  font-size:13px;
+  border-width:2px;
+  background:#213244;
+  color:#ffffff;
+}
+
+header .steps-header .step-indicator.active .step-circle {
+  border-color:#93c5fd;
+  background:var(--accent-color);
+  color:#ffffff;
+  box-shadow:0 0 10px rgba(96,165,250,.65);
+}
+
+@media(max-width:360px) {
+  header {
+    gap:7px;
+    padding-left:10px;
+    padding-right:10px;
+  }
+
+  header .steps-header {
+    gap:5px;
+  }
+
+  header .steps-header .step-circle {
+    width:24px;
+    height:24px;
+    font-size:12px;
+  }
+}
+
+/* =========================================
+   STEP 4 GUARDAR / PDF
+========================================= */
+
+.step4-card {
+  background:var(--input-bg);
+  border:1px solid var(--border-color);
+  border-radius:12px;
+  padding:16px;
+}
+
+.step4-text {
+  margin:0 0 14px 0;
+  color:#ffffff;
+  font-size:15px;
+  font-weight:700;
+  line-height:1.35;
+}
+
+.btn-step4-save,
+.btn-pdf-step4 {
+  margin-top:8px;
+  margin-bottom:8px;
+}
+
+.btn-pdf-step4 {
+  background:#dc2626;
+}
+
+.mensaje-guardado-step4 {
+  background:rgba(39, 174, 96, 0.18);
+  border:1px solid #27ae60;
+  color:#ffffff;
+  border-radius:10px;
+  padding:12px;
+  margin:12px 0;
+  font-weight:800;
+  text-align:center;
+}
+
+.link-pdf-generado {
+  display:block;
+  color:#ffffff;
+  background:#33485c;
+  border:1px solid #60a5fa;
+  text-decoration:none;
+  padding:12px;
+  border-radius:8px;
+  text-align:center;
+  font-weight:900;
+  margin-top:10px;
+}
