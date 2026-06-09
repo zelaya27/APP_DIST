@@ -7,7 +7,6 @@
 
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
   <link rel="stylesheet" href="odt.css">
-
   <script src="config.js"></script>
 </head>
 
@@ -27,10 +26,12 @@
       <div class="step-circle">1</div>
       ODT
     </div>
+
     <div class="step-indicator" id="ind-2">
       <div class="step-circle">2</div>
       Cuadrilla
     </div>
+
     <div class="step-indicator" id="ind-3">
       <div class="step-circle">3</div>
       Supervisor
@@ -54,10 +55,7 @@
           <input id="col_1" readonly>
         </div>
 
-        <div class="form-group">
-          <label>Sector</label>
-          <input id="col_2" readonly>
-        </div>
+        <input type="hidden" id="col_2">
 
         <div class="form-group">
           <label>Estado</label>
@@ -65,25 +63,32 @@
         </div>
 
         <div class="form-group">
+          <label>Cuadrilla</label>
+          <select id="col_4">
+            <option value="">Seleccione cuadrilla...</option>
+          </select>
+        </div>
+
+        <div class="form-group">
           <label>Fecha</label>
-          <input type="date" id="col_4">
+          <input type="date" id="col_5">
         </div>
 
         <div class="form-row-2">
           <div class="form-group">
             <label>Hora llegada</label>
-            <input type="time" id="col_5">
+            <input type="time" id="col_6">
           </div>
 
           <div class="form-group">
             <label>Hora finalizado</label>
-            <input type="time" id="col_6">
+            <input type="time" id="col_7">
           </div>
         </div>
 
         <div class="form-group">
           <label>Razón de Trabajo</label>
-          <select id="col_7">
+          <select id="col_8">
             <option value="">Seleccione...</option>
             <option value="Incidencia de Zona">Incidencia de Zona</option>
             <option value="Incidencia Acometida/Medidor">Incidencia Acometida/Medidor</option>
@@ -93,27 +98,28 @@
 
         <div class="form-group">
           <label>Reporte NME</label>
-          <input type="number" id="col_25" placeholder="Ingrese reporte NME">
+          <input type="number" id="col_26" placeholder="Ingrese reporte NME">
         </div>
 
         <div class="form-group full-width">
           <label>Trabajo Realizado</label>
-          <textarea id="col_8" rows="4"></textarea>
+          <textarea id="col_9" rows="4"></textarea>
         </div>
 
         <div class="form-group">
           <label>Pintado Apoyo</label>
-          <input type="number" id="col_9">
-        </div>
-
-        <div class="form-group">
-          <label>Medidor</label>
           <input type="number" id="col_10">
         </div>
 
         <div class="form-group">
+          <label>Medidor</label>
+          <input type="number" id="col_11">
+        </div>
+
+        <div class="form-group">
           <label>GPS</label>
-          <input id="col_11" placeholder="Ej: 14.081800, -87.206800" onchange="convertirGpsManual()">
+          <input id="col_12" placeholder="Ej: 14.081800, -87.206800" onchange="convertirGpsManual()">
+
           <button type="button" class="btn-mini btn-gps" onclick="confirmarObtenerGPS()">
             <i class="fas fa-location-dot"></i> Obtener GPS
           </button>
@@ -131,7 +137,7 @@
           </div>
         </div>
 
-        <input type="hidden" id="col_12">
+        <input type="hidden" id="col_13">
 
         <div class="form-group full-width">
           <button type="button" class="btn-mini" onclick="abrirModal('poste')">
@@ -151,7 +157,7 @@
 
       <div id="listaCuadrilla"></div>
 
- <button type="button" class="btn-add" onclick="abrirModalMaterial('cuadrilla')">
+      <button type="button" class="btn-add" onclick="abrirModalMaterial('cuadrilla')">
         <i class="fas fa-plus"></i> Agregar Material Cuadrilla
       </button>
     </div>
@@ -245,9 +251,10 @@
     </div>
   </div>
 </div>
-  
+
 <script src="gps-utm.js"></script>
 <script src="materiales.js"></script>
 <script src="odt.js"></script>
+
 </body>
 </html>
