@@ -207,11 +207,11 @@ function renderizarTabla() {
             <i class="fas fa-sliders"></i> Control
           </button>
           <button class="btn-icon btn-pdf" title="Ver PDF" onclick="verPDF('${escaparAtributo(id)}')">
-            <i class="fas fa-file-pdf"></i>
+            <i class="fas fa-file-pdf"></i> PDF
           </button>
           ${crearBotonEditar(row)}
           <button class="btn-icon btn-auditar" title="Auditar" onclick="abrirAuditoria('${escaparAtributo(id)}')">
-            <i class="fas fa-magnifying-glass"></i>
+            <i class="fas fa-magnifying-glass"></i> Auditar
           </button>
         </div>
       </td>
@@ -335,14 +335,14 @@ function crearBotonEditar(row) {
   if (estado === "PENDIENTE") {
     return `
       <button class="btn-icon btn-editar" title="Editar ODT" onclick="editarODT('${id}')">
-        <i class="fas fa-pen"></i>
+        <i class="fas fa-pen"></i> Editar
       </button>
     `;
   }
 
   return `
     <button class="btn-icon btn-editar-bloqueado" title="Solo se puede editar en estado Pendiente" onclick="alert('Esta ODT no puede editarse porque no está en estado Pendiente.')">
-      <i class="fas fa-lock"></i>
+      <i class="fas fa-lock"></i> Editar
     </button>
   `;
 }
@@ -360,7 +360,7 @@ function editarODT(idODT) {
     return;
   }
 
-  window.location.href = "odt.html?id=" + encodeURIComponent(idODT) + "&modo=editar";
+  window.location.href = "odt.html?id=" + encodeURIComponent(idODT) + "&modo=editar&origen=panel";
 }
 
 function filtrarSoloNumerosReporte(input) {
