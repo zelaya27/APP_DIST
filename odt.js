@@ -76,7 +76,7 @@ function volverMenuSeguro() {
     const salir = confirm("Tiene datos sin guardar.\n\n¿Desea salir y perder la información capturada?");
     if (!salir) return;
   }
-  window.location.href = modoEdicionODT ? "listaodt.html" : "menu.html";
+  window.location.href = "menu.html";
 }
 
 function marcarFormularioSucio() {
