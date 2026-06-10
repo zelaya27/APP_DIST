@@ -1,689 +1,651 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Panel ODT - APP DIST</title>
+// =====================================================
+// APP DIST - PANEL ODT
+// Pantalla de escritorio para gestión, controles y auditoría
+// =====================================================
 
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-  <script src="config.js"></script>
+let registrosPanel = [];
+let erroresSeleccionados = [];
 
-  <style>
-    :root {
-      --bg-color:#0b141d;
-      --card-color:#14212d;
-      --accent-color:#003366;
-      --success-color:#27ae60;
-      --warning-color:#f39c12;
-      --danger-color:#e74c3c;
-      --info-color:#3498db;
-      --audit-color:#1e40af;
-      --text-color:#ffffff;
-      --muted-text:#a0aec0;
-      --border-color:#2c3e50;
-      --input-bg:#0b141d;
+const usuarioSesion = sessionStorage.getItem("usuario") || "";
+const sectorSesion = sessionStorage.getItem("sector") || "";
+const tipoUsuarioSesion = String(sessionStorage.getItem("tipo_usuario") || "").trim();
+
+const opcionesErroresAuditoria = [
+  "Hija",
+  "ODT",
+  "Reporte",
+  "Evento",
+  "Requisa",
+  "Actividad",
+  "ID de traslado"
+];
+
+document.addEventListener("DOMContentLoaded", function() {
+  if (!usuarioSesion) {
+    window.location.href = "index.html";
+    return;
+  }
+
+  if (tipoUsuarioSesion === "3") {
+    alert("No cuentas con permisos para ingresar al Panel ODT.");
+    window.location.href = "menu.html";
+    return;
+  }
+
+  document.getElementById("nombreUsuario").textContent = usuarioSesion || "Usuario";
+  document.getElementById("nombreSector").textContent = sectorSesion || "Sector";
+
+  cargarPanelODT();
+});
+
+function cerrarSesion() {
+  sessionStorage.clear();
+  window.location.href = "index.html";
+}
+
+// =====================================================
+// CARGA PRINCIPAL
+// =====================================================
+
+async function cargarPanelODT() {
+  const tbody = document.getElementById("tablaODT");
+  tbody.innerHTML = '<tr><td colspan="7" class="mensaje-tabla"><i class="fas fa-spinner fa-spin"></i> Cargando ODT...</td></tr>';
+
+  try {
+    const response = await fetch(CONFIG.URL_APPS_SCRIPT, {
+      method: "POST",
+      mode: "cors",
+      body: JSON.stringify({
+        action: "obtenerPanelODT",
+        usuario: usuarioSesion,
+        tipo_usuario: tipoUsuarioSesion,
+        sector: sectorSesion
+      })
+    });
+
+    const data = await response.json();
+
+    if (data.status !== "Éxito") {
+      throw new Error(data.message || "No se pudo cargar el panel ODT.");
     }
 
-    * { box-sizing:border-box; }
+    registrosPanel = data.odts || [];
+    actualizarResumen();
+    renderizarTabla();
 
-    body {
-      font-family:'Segoe UI', Arial, sans-serif;
-      background-color:var(--bg-color);
-      color:var(--text-color);
-      margin:0;
-      padding:0;
-      min-width:1100px;
+  } catch (error) {
+    console.error(error);
+    tbody.innerHTML = '<tr><td colspan="7" class="mensaje-tabla mensaje-error"><i class="fas fa-exclamation-triangle"></i> Error cargando Panel ODT: ' + escaparHTML(error.message) + '</td></tr>';
+  }
+}
+
+// =====================================================
+// RESUMEN SUPERIOR
+// =====================================================
+
+function actualizarResumen() {
+  const resumen = {
+    pendiente: { INCIDENCIAS: 0, MANTENIMIENTO: 0, OPERACIONES: 0 },
+    ejecutada: { INCIDENCIAS: 0, MANTENIMIENTO: 0, OPERACIONES: 0 }
+  };
+
+  registrosPanel.forEach(function(row) {
+    const estado = normalizarTexto(row.col_3 || "Pendiente");
+    const razon = normalizarTexto(row.col_8 || "");
+
+    if (!resumen.pendiente.hasOwnProperty(razon)) return;
+
+    if (estado === "PENDIENTE") {
+      resumen.pendiente[razon]++;
     }
 
-    header {
-      background-color:var(--card-color);
-      padding:10px 20px;
-      display:flex;
-      justify-content:space-between;
-      align-items:center;
-      border-bottom:1px solid var(--border-color);
-      gap:18px;
-      position:sticky;
-      top:0;
-      z-index:50;
+    if (estado === "TERMINADO" || estado === "AUDITADO") {
+      resumen.ejecutada[razon]++;
+    }
+  });
+
+  setTexto("pendIncidencias", resumen.pendiente.INCIDENCIAS);
+  setTexto("pendMantenimiento", resumen.pendiente.MANTENIMIENTO);
+  setTexto("pendOperaciones", resumen.pendiente.OPERACIONES);
+
+  setTexto("ejecIncidencias", resumen.ejecutada.INCIDENCIAS);
+  setTexto("ejecMantenimiento", resumen.ejecutada.MANTENIMIENTO);
+  setTexto("ejecOperaciones", resumen.ejecutada.OPERACIONES);
+}
+
+function setTexto(id, valor) {
+  const el = document.getElementById(id);
+  if (el) el.textContent = valor;
+}
+
+// =====================================================
+// FILTROS Y TABLA
+// =====================================================
+
+function obtenerDatosFiltrados() {
+  const estado = document.getElementById("filtroEstado").value;
+  const razon = document.getElementById("filtroRazon").value;
+  const fechaDesde = document.getElementById("fechaDesde").value;
+  const fechaHasta = document.getElementById("fechaHasta").value;
+  const texto = normalizarTexto(document.getElementById("buscadorTexto").value || "");
+  const reporteBuscado = String(document.getElementById("buscadorReporte") ? document.getElementById("buscadorReporte").value : "").trim();
+
+  let datos = registrosPanel.slice();
+
+  datos = datos.filter(function(row) {
+    const estadoFila = normalizarTexto(row.col_3 || "Pendiente");
+    const razonFila = normalizarTexto(row.col_8 || "");
+    const fechaISO = String(row.fecha_iso || "").trim();
+
+    if (estado !== "ALL" && estadoFila !== estado) return false;
+    if (razon !== "ALL" && razonFila !== razon) return false;
+    if (fechaDesde && fechaISO && fechaISO < fechaDesde) return false;
+    if (fechaHasta && fechaISO && fechaISO > fechaHasta) return false;
+
+    if (texto) {
+      const idODT = normalizarTexto(row.col_0 || "");
+      if (!idODT.includes(texto)) return false;
     }
 
-    .brand {
-      display:flex;
-      align-items:center;
-      gap:16px;
-      min-width:360px;
+    if (reporteBuscado) {
+      const reporteFila = String(row.col_26 || "").trim();
+      if (!reporteFila.includes(reporteBuscado)) return false;
     }
 
-    .logo-box {
-      background:#ffffff;
-      padding:5px 10px;
-      border-radius:4px;
-      display:flex;
-      align-items:center;
+    return true;
+  });
+
+  return datos;
+}
+
+function renderizarTabla() {
+  const tbody = document.getElementById("tablaODT");
+  const limitSelector = document.getElementById("limitSelector");
+  const odtBuscada = String(document.getElementById("buscadorTexto").value || "").trim();
+  const reporteBuscado = String(document.getElementById("buscadorReporte") ? document.getElementById("buscadorReporte").value : "").trim();
+
+  let datos = obtenerDatosFiltrados();
+
+  datos.sort(function(a, b) {
+    return (Number(b.fecha_orden) || 0) - (Number(a.fecha_orden) || 0);
+  });
+
+  if (limitSelector.value !== "ALL") {
+    datos = datos.slice(0, parseInt(limitSelector.value, 10));
+  }
+
+  tbody.innerHTML = "";
+
+  if (datos.length === 0) {
+    let mensaje = "No hay ODT para mostrar con los filtros seleccionados.";
+
+    if (reporteBuscado) {
+      mensaje = "No se encontró el reporte.";
+    } else if (odtBuscada) {
+      mensaje = "No se encontró la ODT.";
     }
 
-    .logo-box img { height:32px; display:block; }
+    tbody.innerHTML = '<tr><td colspan="7" class="mensaje-tabla">' + escaparHTML(mensaje) + '</td></tr>';
+    return;
+  }
 
-    .brand h2 {
-      margin:0;
-      color:#ffffff;
-      font-size:20px;
-      font-weight:900;
-      letter-spacing:.7px;
-      white-space:nowrap;
+  datos.forEach(function(row) {
+    const tr = document.createElement("tr");
+    const id = String(row.col_0 || "").trim();
+    const estado = String(row.col_3 || "Pendiente").trim();
+
+    tr.innerHTML = `
+      <td class="col-id"><strong>${escaparHTML(id)}</strong></td>
+      <td class="col-estado">${crearSelectEstado(row)}</td>
+      <td class="col-fecha">${escaparHTML(row.col_5 || "")}</td>
+      <td class="col-cuadrilla">${escaparHTML(row.col_4 || "")}</td>
+      <td class="col-razon">${escaparHTML(row.col_8 || "")}</td>
+      <td class="col-reporte">${escaparHTML(row.col_26 || "")}</td>
+      <td class="col-acciones">
+        <div class="acciones-td">
+          <button class="btn-icon btn-controles btn-control-grande" title="Datos de control" onclick="abrirControles('${escaparAtributo(id)}')">
+            <i class="fas fa-sliders"></i> Control
+          </button>
+          <button class="btn-icon btn-pdf" title="Ver PDF" onclick="verPDF('${escaparAtributo(id)}')">
+            <i class="fas fa-file-pdf"></i> PDF
+          </button>
+          ${crearBotonEditar(row)}
+          <button class="btn-icon btn-auditar" title="Auditar" onclick="abrirAuditoria('${escaparAtributo(id)}')">
+            <i class="fas fa-magnifying-glass"></i> Auditar
+          </button>
+        </div>
+      </td>
+    `;
+
+    tbody.appendChild(tr);
+  });
+}
+
+function crearSelectEstado(row) {
+  const id = escaparAtributo(row.col_0 || "");
+  const estado = String(row.col_3 || "Pendiente").trim();
+  const estadoNorm = normalizarTexto(estado);
+  const clase = obtenerClaseEstadoSelect(estado);
+  const esTipo1 = tipoUsuarioSesion === "1";
+  const esTipo2 = tipoUsuarioSesion === "2";
+
+  let opciones = ["Pendiente", "Terminado"];
+  if (esTipo1) opciones.push("Auditado");
+
+  const disabled = (!esTipo1 && estadoNorm === "AUDITADO") ? "disabled" : "";
+
+  let html = `<select class="estado-select ${clase}" ${disabled} onchange="cambiarEstadoDesdeTabla('${id}', this)">`;
+  opciones.forEach(function(op) {
+    const selected = normalizarTexto(op) === estadoNorm ? "selected" : "";
+    html += `<option value="${op}" ${selected}>${op}</option>`;
+  });
+
+  // Si es tipo 2 y ya está auditado, debe visualizar Auditado aunque no pueda cambiarlo.
+  if (!esTipo1 && estadoNorm === "AUDITADO") {
+    html += `<option value="Auditado" selected>Auditado</option>`;
+  }
+
+  html += "</select>";
+  return html;
+}
+
+function obtenerClaseEstadoSelect(estado) {
+  const e = normalizarTexto(estado);
+  if (e === "TERMINADO") return "estado-terminado";
+  if (e === "AUDITADO") return "estado-auditado";
+  return "estado-pendiente";
+}
+
+function limpiarFiltros() {
+  document.getElementById("limitSelector").value = "10";
+  document.getElementById("filtroEstado").value = "ALL";
+  document.getElementById("filtroRazon").value = "ALL";
+  document.getElementById("fechaDesde").value = "";
+  document.getElementById("fechaHasta").value = "";
+  document.getElementById("buscadorTexto").value = "";
+  if (document.getElementById("buscadorReporte")) document.getElementById("buscadorReporte").value = "";
+  renderizarTabla();
+}
+
+// =====================================================
+// CAMBIO DE ESTADO DESDE TABLA
+// =====================================================
+
+async function cambiarEstadoDesdeTabla(idODT, select) {
+  const nuevoEstado = select.value;
+  const registro = buscarRegistro(idODT);
+  const estadoAnterior = registro ? String(registro.col_3 || "Pendiente") : "Pendiente";
+
+  if (tipoUsuarioSesion !== "1" && normalizarTexto(nuevoEstado) === "AUDITADO") {
+    alert("No cuentas con los permisos para cambiar a estado Auditado.");
+    select.value = estadoAnterior;
+    return;
+  }
+
+  if (tipoUsuarioSesion !== "1" && normalizarTexto(estadoAnterior) === "AUDITADO") {
+    alert("No cuentas con los permisos para modificar una ODT auditada.");
+    select.value = estadoAnterior;
+    return;
+  }
+
+  const confirmar = confirm("¿Desea cambiar el estado de la ODT " + idODT + " a " + nuevoEstado + "?");
+  if (!confirmar) {
+    select.value = estadoAnterior;
+    return;
+  }
+
+  select.disabled = true;
+
+  try {
+    const response = await fetch(CONFIG.URL_APPS_SCRIPT, {
+      method: "POST",
+      mode: "cors",
+      body: JSON.stringify({
+        action: "cambiarEstadoODT",
+        idODT: idODT,
+        estado: nuevoEstado,
+        usuario: usuarioSesion,
+        tipo_usuario: tipoUsuarioSesion
+      })
+    });
+
+    const data = await response.json();
+    if (data.status !== "Éxito") throw new Error(data.message || "No se pudo cambiar el estado.");
+
+    if (registro) registro.col_3 = nuevoEstado;
+    actualizarResumen();
+    renderizarTabla();
+
+  } catch (error) {
+    console.error(error);
+    alert("Error cambiando estado: " + error.message);
+    select.value = estadoAnterior;
+    select.disabled = false;
+  }
+}
+
+// =====================================================
+// EDICIÓN Y FILTRO DE REPORTE
+// =====================================================
+
+function crearBotonEditar(row) {
+  const id = escaparAtributo(row.col_0 || "");
+  const estado = normalizarTexto(row.col_3 || "Pendiente");
+
+  if (estado === "PENDIENTE") {
+    return `
+      <button class="btn-icon btn-editar" title="Editar ODT" onclick="editarODT('${id}')">
+        <i class="fas fa-pen"></i> Editar
+      </button>
+    `;
+  }
+
+  return `
+    <button class="btn-icon btn-editar-bloqueado" title="Solo se puede editar en estado Pendiente" onclick="alert('Esta ODT no puede editarse porque no está en estado Pendiente.')">
+      <i class="fas fa-lock"></i> Editar
+    </button>
+  `;
+}
+
+function editarODT(idODT) {
+  const registro = buscarRegistro(idODT);
+
+  if (!registro) {
+    alert("No se encontró la ODT seleccionada.");
+    return;
+  }
+
+  if (normalizarTexto(registro.col_3 || "") !== "PENDIENTE") {
+    alert("Esta ODT no puede editarse porque no está en estado Pendiente.");
+    return;
+  }
+
+  window.location.href = "odt.html?id=" + encodeURIComponent(idODT) + "&modo=editar&origen=panel";
+}
+
+function filtrarSoloNumerosReporte(input) {
+  input.value = String(input.value || "").replace(/\D/g, "");
+}
+
+// =====================================================
+// PDF
+// =====================================================
+
+function verPDF(idODT) {
+  const registro = buscarRegistro(idODT);
+  const url = registro ? String(registro.col_35 || "").trim() : "";
+
+  if (!url) {
+    alert("Esta ODT aún no tiene PDF generado.");
+    return;
+  }
+
+  window.open(url, "_blank", "noopener");
+}
+
+// =====================================================
+// MODAL CONTROLES
+// =====================================================
+
+function abrirControles(idODT) {
+  const row = buscarRegistro(idODT);
+  if (!row) {
+    alert("No se encontró la ODT seleccionada.");
+    return;
+  }
+
+  document.getElementById("ctrl_idODT").value = idODT;
+  prepararSelectEstadoControl(row);
+
+  document.getElementById("ctrl_reporte").value = row.col_26 || "";
+  document.getElementById("ctrl_odtPadre").value = row.col_27 || "";
+  document.getElementById("ctrl_hija").value = row.col_28 || "";
+  document.getElementById("ctrl_evento").value = row.col_29 || "";
+  document.getElementById("ctrl_actividad").value = row.col_30 || "";
+  document.getElementById("ctrl_requisa").value = row.col_31 || "";
+  document.getElementById("ctrl_traslado").value = row.col_32 || "";
+  document.getElementById("ctrl_gestionadoPor").value = usuarioSesion;
+
+  document.getElementById("modalControlesBg").style.display = "flex";
+}
+
+function prepararSelectEstadoControl(row) {
+  const select = document.getElementById("ctrl_estado");
+  const estadoActual = String(row.col_3 || "Pendiente").trim();
+  const estadoNorm = normalizarTexto(estadoActual);
+  const esTipo1 = tipoUsuarioSesion === "1";
+
+  select.innerHTML = "";
+
+  let opciones = ["Pendiente", "Terminado"];
+  if (esTipo1) opciones.push("Auditado");
+
+  opciones.forEach(function(op) {
+    const option = document.createElement("option");
+    option.value = op;
+    option.textContent = op;
+    if (normalizarTexto(op) === estadoNorm) option.selected = true;
+    select.appendChild(option);
+  });
+
+  if (!esTipo1 && estadoNorm === "AUDITADO") {
+    const option = document.createElement("option");
+    option.value = "Auditado";
+    option.textContent = "Auditado";
+    option.selected = true;
+    select.appendChild(option);
+    select.disabled = true;
+  } else {
+    select.disabled = false;
+  }
+}
+
+function cerrarModalControles() {
+  document.getElementById("modalControlesBg").style.display = "none";
+}
+
+async function guardarControles() {
+  const idODT = document.getElementById("ctrl_idODT").value;
+  const estado = document.getElementById("ctrl_estado").value;
+
+  if (!idODT) {
+    alert("ID ODT no válido.");
+    return;
+  }
+
+  const datos = {
+    action: "guardarControlesODT",
+    idODT: idODT,
+    usuario: usuarioSesion,
+    tipo_usuario: tipoUsuarioSesion,
+    estado: estado,
+    reporte: document.getElementById("ctrl_reporte").value,
+    odtPadre: document.getElementById("ctrl_odtPadre").value,
+    hija: document.getElementById("ctrl_hija").value,
+    evento: document.getElementById("ctrl_evento").value,
+    actividad: document.getElementById("ctrl_actividad").value,
+    requisa: document.getElementById("ctrl_requisa").value,
+    traslado: document.getElementById("ctrl_traslado").value
+  };
+
+  try {
+    const response = await fetch(CONFIG.URL_APPS_SCRIPT, {
+      method: "POST",
+      mode: "cors",
+      body: JSON.stringify(datos)
+    });
+
+    const data = await response.json();
+    if (data.status !== "Éxito") throw new Error(data.message || "No se pudo guardar controles.");
+
+    const row = buscarRegistro(idODT);
+    if (row) {
+      row.col_3 = estado;
+      row.col_26 = datos.reporte;
+      row.col_27 = datos.odtPadre;
+      row.col_28 = datos.hija;
+      row.col_29 = datos.evento;
+      row.col_30 = datos.actividad;
+      row.col_31 = datos.requisa;
+      row.col_32 = datos.traslado;
+      row.col_33 = usuarioSesion;
     }
 
-    .top-user-info {
-      display:flex;
-      align-items:center;
-      justify-content:flex-end;
-      gap:14px;
-      flex-wrap:wrap;
-      font-size:13px;
+    cerrarModalControles();
+    actualizarResumen();
+    renderizarTabla();
+    alert("Datos de control actualizados correctamente.");
+
+  } catch (error) {
+    console.error(error);
+    alert("Error guardando controles: " + error.message);
+  }
+}
+
+// =====================================================
+// MODAL AUDITORÍA
+// =====================================================
+
+function abrirAuditoria(idODT) {
+  if (tipoUsuarioSesion !== "1") {
+    alert("No cuentas con los permisos para auditar.");
+    return;
+  }
+
+  const row = buscarRegistro(idODT);
+  if (!row) {
+    alert("No se encontró la ODT seleccionada.");
+    return;
+  }
+
+  document.getElementById("audit_idODT").value = idODT;
+  document.getElementById("audit_auditadoPor").value = usuarioSesion;
+  document.getElementById("audit_observaciones").value = row.col_38 || "";
+
+  erroresSeleccionados = separarErrores(row.col_37 || "");
+  renderizarOpcionesErrores();
+  actualizarCampoErrores();
+
+  document.getElementById("modalAuditoriaBg").style.display = "flex";
+}
+
+function cerrarModalAuditoria() {
+  document.getElementById("modalAuditoriaBg").style.display = "none";
+}
+
+function renderizarOpcionesErrores() {
+  const grid = document.getElementById("audit_errores_grid");
+  grid.innerHTML = "";
+
+  opcionesErroresAuditoria.forEach(function(opcion) {
+    const div = document.createElement("div");
+    div.className = "error-opcion" + (erroresSeleccionados.includes(opcion) ? " activo" : "");
+    div.textContent = opcion;
+    div.onclick = function() {
+      toggleErrorAuditoria(opcion);
+    };
+    grid.appendChild(div);
+  });
+}
+
+function toggleErrorAuditoria(opcion) {
+  const idx = erroresSeleccionados.indexOf(opcion);
+  if (idx >= 0) {
+    erroresSeleccionados.splice(idx, 1);
+  } else {
+    erroresSeleccionados.push(opcion);
+  }
+
+  renderizarOpcionesErrores();
+  actualizarCampoErrores();
+}
+
+function actualizarCampoErrores() {
+  document.getElementById("audit_errores").value = erroresSeleccionados.join(", ");
+}
+
+function separarErrores(valor) {
+  if (!valor) return [];
+  return String(valor)
+    .split(",")
+    .map(v => v.trim())
+    .filter(Boolean);
+}
+
+async function guardarAuditoria() {
+  const idODT = document.getElementById("audit_idODT").value;
+  const observaciones = document.getElementById("audit_observaciones").value;
+  const errores = erroresSeleccionados.join(", ");
+
+  if (tipoUsuarioSesion !== "1") {
+    alert("No cuentas con los permisos para auditar.");
+    return;
+  }
+
+  if (!idODT) {
+    alert("ID ODT no válido.");
+    return;
+  }
+
+  try {
+    const response = await fetch(CONFIG.URL_APPS_SCRIPT, {
+      method: "POST",
+      mode: "cors",
+      body: JSON.stringify({
+        action: "guardarAuditoriaODT",
+        idODT: idODT,
+        usuario: usuarioSesion,
+        tipo_usuario: tipoUsuarioSesion,
+        errores: errores,
+        observaciones: observaciones
+      })
+    });
+
+    const data = await response.json();
+    if (data.status !== "Éxito") throw new Error(data.message || "No se pudo guardar auditoría.");
+
+    const row = buscarRegistro(idODT);
+    if (row) {
+      row.col_3 = "Auditado";
+      row.col_36 = usuarioSesion;
+      row.col_37 = errores;
+      row.col_38 = observaciones;
     }
 
-    .top-user-info .info-item {
-      color:#ffffff;
-      white-space:nowrap;
-    }
-
-    .top-user-info .info-item span {
-      color:#60a5fa;
-      font-weight:900;
-    }
-
-    .btn-logout {
-      background:var(--danger-color);
-      color:white;
-      border:none;
-      padding:8px 13px;
-      border-radius:4px;
-      cursor:pointer;
-      font-weight:800;
-    }
-
-    .btn-logout:hover { background:var(--warning-color); }
-
-    .container {
-      max-width:1840px;
-      margin:18px auto;
-      padding:0 18px 25px;
-    }
-
-    .resumen-row {
-      display:grid;
-      grid-template-columns:1fr 1fr;
-      gap:12px;
-      margin-bottom:12px;
-    }
-
-    .resumen-card {
-      background:var(--card-color);
-      border:1px solid var(--border-color);
-      border-radius:8px;
-      padding:10px 14px;
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
-      gap:16px;
-      min-height:82px;
-      box-shadow:0 3px 6px rgba(0,0,0,.24);
-    }
-
-    .resumen-title {
-      min-width:190px;
-      font-size:14px;
-      font-weight:900;
-      color:#ffffff;
-      display:flex;
-      align-items:center;
-      gap:8px;
-    }
-
-    .resumen-title.pendiente i { color:#ff6b6b; }
-    .resumen-title.ejecutada i { color:#2ecc71; }
-
-    .resumen-items {
-      display:grid;
-      grid-template-columns:repeat(3, minmax(130px, 1fr));
-      gap:8px;
-      width:100%;
-    }
-
-    .resumen-mini {
-      background:#0b141d;
-      border:1px solid #263a4d;
-      border-radius:6px;
-      padding:8px 10px;
-      display:flex;
-      justify-content:space-between;
-      align-items:center;
-      gap:10px;
-    }
-
-    .resumen-mini span:first-child {
-      color:#d8e2ee;
-      font-size:12px;
-      font-weight:800;
-      white-space:nowrap;
-    }
-
-    .resumen-mini span:last-child {
-      color:#ffffff;
-      font-size:18px;
-      font-weight:900;
-    }
-
-    .panel-box {
-      background:var(--card-color);
-      border:1px solid var(--border-color);
-      border-radius:8px;
-      padding:14px;
-      box-shadow:0 4px 6px rgba(0,0,0,.28);
-    }
-
-    .filtros-panel {
-      display:grid;
-      grid-template-columns:90px 145px 170px 135px 135px 1fr 150px 110px;
-      gap:10px;
-      align-items:end;
-      border-bottom:1px solid var(--border-color);
-      padding-bottom:14px;
-      margin-bottom:12px;
-    }
-
-    .filtro-grupo {
-      display:flex;
-      flex-direction:column;
-      gap:5px;
-    }
-
-    .filtro-grupo label {
-      font-size:12px;
-      color:var(--muted-text);
-      font-weight:800;
-      white-space:nowrap;
-    }
-
-    .input-filtro {
-      width:100%;
-      padding:8px 10px;
-      border-radius:5px;
-      background:var(--input-bg);
-      color:#ffffff;
-      border:1px solid var(--border-color);
-      font-size:13px;
-      outline:none;
-      color-scheme:dark;
-      min-height:34px;
-    }
-
-
-    .filtro-buscar-odt {
-      min-width:260px;
-      flex:1 1 280px;
-    }
-
-    .filtro-buscar-odt input {
-      min-width:220px;
-    }
-
-    .input-filtro:focus {
-      border-color:#60a5fa;
-      box-shadow:0 0 0 2px rgba(96,165,250,.18);
-    }
-
-    .btn-limpiar {
-      background:#34495e;
-      color:white;
-      border:1px solid var(--border-color);
-      padding:8px 12px;
-      border-radius:5px;
-      cursor:pointer;
-      font-weight:800;
-      min-height:34px;
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      gap:6px;
-    }
-
-    .btn-limpiar:hover { background:var(--danger-color); border-color:var(--danger-color); }
-
-    .table-responsive { overflow-x:auto; }
-
-    table {
-      width:100%;
-      border-collapse:collapse;
-      margin-top:8px;
-      table-layout:auto;
-    }
-
-    th, td {
-      padding:10px 11px;
-      text-align:left;
-      border-bottom:1px solid var(--border-color);
-      font-size:13px;
-      vertical-align:middle;
-    }
-
-    th {
-      background-color:var(--accent-color);
-      color:#ffffff;
-      font-weight:800;
-      position:sticky;
-      top:53px;
-      z-index:10;
-    }
-
-    tbody tr:hover { background:#665112; }
-
-    .col-id { width:135px; white-space:nowrap; }
-    .col-estado { width:145px; }
-    .col-fecha { width:115px; white-space:nowrap; }
-    .col-cuadrilla { min-width:250px; max-width:360px; }
-    .col-razon { min-width:150px; max-width:210px; }
-    .col-reporte { width:105px; text-align:center; white-space:nowrap; }
-    .col-acciones { width:235px; text-align:center; }
-
-    .estado-select {
-      background:#0b141d;
-      color:#ffffff;
-      border:1px solid var(--border-color);
-      border-radius:5px;
-      padding:6px 8px;
-      font-weight:800;
-      min-width:125px;
-      color-scheme:dark;
-    }
-
-    .estado-select.estado-pendiente { border-color:#ff6b6b; color:#ff8a8a; }
-    .estado-select.estado-terminado { border-color:#2ecc71; color:#2ecc71; }
-    .estado-select.estado-auditado { border-color:#60a5fa; color:#60a5fa; }
-
-    .acciones-td {
-      display:flex;
-      justify-content:center;
-      align-items:center;
-      gap:6px;
-      white-space:nowrap;
-    }
-
-    .btn-icon {
-      width:34px;
-      height:34px;
-      border:none;
-      border-radius:6px;
-      cursor:pointer;
-      display:inline-flex;
-      justify-content:center;
-      align-items:center;
-      color:#ffffff;
-      font-size:14px;
-      transition:all .2s ease;
-    }
-
-    .btn-icon:hover { transform:translateY(-1px); box-shadow:0 0 8px rgba(255,255,255,.22); }
-
-    .btn-control-grande {
-      width:auto;
-      min-width:92px;
-      height:38px;
-      padding:0 12px;
-      gap:7px;
-      font-size:13px;
-      font-weight:900;
-    }
-
-    .btn-control-grande i { font-size:15px; }
-
-    .btn-controles { background:#27ae60; }
-    .btn-pdf { background:#e74c3c; }
-    .btn-editar { background:#f39c12; }
-    .btn-editar-bloqueado { background:#64748b; cursor:not-allowed; opacity:.78; }
-    .btn-auditar { background:#2563eb; }
-
-    .mensaje-tabla {
-      text-align:center;
-      color:#d8e2ee;
-      padding:25px;
-      font-weight:800;
-    }
-
-    .mensaje-error { color:#ff8a8a; }
-
-    .modal-bg {
-      display:none;
-      position:fixed;
-      inset:0;
-      background:rgba(0,0,0,.76);
-      z-index:200;
-      justify-content:center;
-      align-items:center;
-      padding:20px;
-    }
-
-    .modal {
-      width:100%;
-      max-width:860px;
-      background:var(--card-color);
-      border:1px solid var(--border-color);
-      border-radius:10px;
-      box-shadow:0 12px 30px rgba(0,0,0,.55);
-      padding:18px;
-    }
-
-    .modal.modal-auditoria { max-width:720px; }
-
-    .modal h3 {
-      margin:0 0 14px;
-      padding-bottom:10px;
-      border-bottom:1px solid var(--border-color);
-      color:#ffffff;
-      display:flex;
-      align-items:center;
-      gap:8px;
-    }
-
-    .control-grid {
-      display:grid;
-      grid-template-columns:1fr 1fr;
-      gap:12px 16px;
-      align-items:end;
-    }
-
-    .control-grid .full { grid-column:1 / -1; }
-
-    .modal label {
-      display:block;
-      color:#ffffff;
-      font-size:13px;
-      font-weight:800;
-      margin-bottom:5px;
-    }
-
-    .modal input,
-    .modal select,
-    .modal textarea {
-      width:100%;
-      background:#0b141d;
-      color:#ffffff;
-      border:1px solid var(--border-color);
-      border-radius:6px;
-      padding:9px 10px;
-      font-size:14px;
-      outline:none;
-      color-scheme:dark;
-    }
-
-    .modal textarea { min-height:135px; resize:vertical; line-height:1.35; }
-
-    .modal input[readonly] {
-      background:#101a24;
-      color:#60a5fa;
-      font-weight:900;
-    }
-
-    .modal-actions {
-      display:flex;
-      justify-content:flex-end;
-      gap:10px;
-      margin-top:16px;
-    }
-
-    .btn-modal {
-      border:none;
-      border-radius:6px;
-      padding:10px 18px;
-      cursor:pointer;
-      color:white;
-      font-weight:900;
-      min-width:110px;
-    }
-
-    .btn-cancelar { background:#34495e; }
-    .btn-guardar { background:#27ae60; }
-    .btn-guardar-auditoria { background:#2563eb; }
-
-    .errores-grid {
-      display:grid;
-      grid-template-columns:repeat(4, 1fr);
-      gap:8px;
-    }
-
-    .error-opcion {
-      background:#0b141d;
-      color:#d8e2ee;
-      border:1px solid var(--border-color);
-      border-radius:7px;
-      padding:9px 10px;
-      cursor:pointer;
-      font-weight:800;
-      text-align:center;
-      user-select:none;
-    }
-
-    .error-opcion.activo {
-      background:#2563eb;
-      color:#ffffff;
-      border-color:#60a5fa;
-      box-shadow:0 0 10px rgba(96,165,250,.35);
-    }
-
-    @media(max-width:1400px) {
-      .filtros-panel { grid-template-columns:90px 145px 160px 130px 130px 1fr 140px 100px; }
-      .resumen-items { grid-template-columns:repeat(3, minmax(110px, 1fr)); }
-    }
-  </style>
-</head>
-<body>
-
-<header>
-  <div class="brand">
-    <div class="logo-box">
-      <img src="https://raw.githubusercontent.com/zelaya27/IMAGENES_AZ/main/UTCD%20Vertical.png" alt="Logo UTCD">
-    </div>
-    <h2>PANEL ODT</h2>
-  </div>
-
-  <div class="top-user-info">
-    <span class="info-item"><i class="fas fa-user-circle"></i> <span id="nombreUsuario">Usuario</span></span>
-    <span style="color:var(--border-color);">|</span>
-    <span class="info-item"><i class="fas fa-map-marker-alt"></i> <span id="nombreSector">Sector</span></span>
-    <button class="btn-logout" onclick="cerrarSesion()"><i class="fas fa-sign-out-alt"></i> Cerrar sesión</button>
-  </div>
-</header>
-
-<div class="container">
-  <div class="resumen-row">
-    <div class="resumen-card">
-      <div class="resumen-title pendiente"><i class="fas fa-circle"></i> Pendientes</div>
-      <div class="resumen-items">
-        <div class="resumen-mini"><span>Incidencias</span><span id="pendIncidencias">0</span></div>
-        <div class="resumen-mini"><span>Mantenimiento</span><span id="pendMantenimiento">0</span></div>
-        <div class="resumen-mini"><span>Operaciones</span><span id="pendOperaciones">0</span></div>
-      </div>
-    </div>
-
-    <div class="resumen-card">
-      <div class="resumen-title ejecutada"><i class="fas fa-circle"></i> Ejecutadas / Auditadas</div>
-      <div class="resumen-items">
-        <div class="resumen-mini"><span>Incidencias</span><span id="ejecIncidencias">0</span></div>
-        <div class="resumen-mini"><span>Mantenimiento</span><span id="ejecMantenimiento">0</span></div>
-        <div class="resumen-mini"><span>Operaciones</span><span id="ejecOperaciones">0</span></div>
-      </div>
-    </div>
-  </div>
-
-  <div class="panel-box">
-    <div class="filtros-panel">
-      <div class="filtro-grupo">
-        <label>Mostrar:</label>
-        <select id="limitSelector" class="input-filtro" onchange="renderizarTabla()">
-          <option value="10" selected>10</option>
-          <option value="20">20</option>
-          <option value="50">50</option>
-          <option value="ALL">Todos</option>
-        </select>
-      </div>
-
-      <div class="filtro-grupo">
-        <label>Estado:</label>
-        <select id="filtroEstado" class="input-filtro" onchange="renderizarTabla()">
-          <option value="ALL">Todas</option>
-          <option value="PENDIENTE">Pendiente</option>
-          <option value="TERMINADO">Terminado</option>
-          <option value="AUDITADO">Auditado</option>
-        </select>
-      </div>
-
-
-      <div class="filtro-grupo">
-        <label>Razón:</label>
-        <select id="filtroRazon" class="input-filtro" onchange="renderizarTabla()">
-          <option value="ALL">Todas</option>
-          <option value="INCIDENCIAS">Incidencias</option>
-          <option value="MANTENIMIENTO">Mantenimiento</option>
-          <option value="OPERACIONES">Operaciones</option>
-        </select>
-      </div>
-
-      <div class="filtro-grupo">
-        <label>Fecha desde:</label>
-        <input type="date" id="fechaDesde" class="input-filtro" onchange="renderizarTabla()">
-      </div>
-
-      <div class="filtro-grupo">
-        <label>Fecha hasta:</label>
-        <input type="date" id="fechaHasta" class="input-filtro" onchange="renderizarTabla()">
-      </div>
-
-      <div class="filtro-grupo filtro-buscar-odt">
-        <label>Buscar ODT:</label>
-        <input id="buscadorTexto" class="input-filtro" placeholder="Escriba ID ODT..." oninput="renderizarTabla()">
-      </div>
-
-      <div class="filtro-grupo">
-        <label>Buscar reporte:</label>
-        <input id="buscadorReporte" class="input-filtro" type="text" inputmode="numeric" pattern="[0-9]*" placeholder="N° reporte" oninput="filtrarSoloNumerosReporte(this); renderizarTabla()">
-      </div>
-
-      <button class="btn-limpiar" onclick="limpiarFiltros()"><i class="fas fa-times-circle"></i> Limpiar</button>
-    </div>
-
-    <div class="table-responsive">
-      <table>
-        <thead>
-          <tr>
-            <th class="col-id">ID ODT</th>
-            <th class="col-estado">Estado</th>
-            <th class="col-fecha">Fecha</th>
-            <th class="col-cuadrilla">Cuadrilla</th>
-            <th class="col-razon">Razón</th>
-            <th class="col-reporte">Reporte</th>
-            <th class="col-acciones">Acciones</th>
-          </tr>
-        </thead>
-        <tbody id="tablaODT">
-          <tr><td colspan="7" class="mensaje-tabla">Cargando ODT...</td></tr>
-        </tbody>
-      </table>
-    </div>
-  </div>
-</div>
-
-<div class="modal-bg" id="modalControlesBg">
-  <div class="modal">
-    <h3><i class="fas fa-sliders"></i> Datos de control</h3>
-
-    <input type="hidden" id="ctrl_idODT">
-
-    <div class="control-grid">
-      <div class="full">
-        <label>Estado</label>
-        <select id="ctrl_estado"></select>
-      </div>
-
-      <div>
-        <label>Reporte</label>
-        <input type="number" step="1" id="ctrl_reporte">
-      </div>
-
-      <div>
-        <label>ODT Padre</label>
-        <input type="number" step="1" id="ctrl_odtPadre">
-      </div>
-
-      <div>
-        <label>Hija</label>
-        <input type="number" step="1" id="ctrl_hija">
-      </div>
-
-      <div>
-        <label>Evento</label>
-        <input type="number" step="1" id="ctrl_evento">
-      </div>
-
-      <div>
-        <label>Actividad</label>
-        <input type="number" step="1" id="ctrl_actividad">
-      </div>
-
-      <div>
-        <label>Requisa</label>
-        <input type="number" step="1" id="ctrl_requisa">
-      </div>
-
-      <div>
-        <label>Traslado</label>
-        <input type="number" step="1" id="ctrl_traslado">
-      </div>
-
-      <div>
-        <label>Gestionado por</label>
-        <input id="ctrl_gestionadoPor" readonly>
-      </div>
-    </div>
-
-    <div class="modal-actions">
-      <button class="btn-modal btn-cancelar" onclick="cerrarModalControles()">Cancelar</button>
-      <button class="btn-modal btn-guardar" onclick="guardarControles()"><i class="fas fa-save"></i> Guardar</button>
-    </div>
-  </div>
-</div>
-
-<div class="modal-bg" id="modalAuditoriaBg">
-  <div class="modal modal-auditoria">
-    <h3><i class="fas fa-magnifying-glass"></i> Auditoría ODT</h3>
-
-    <input type="hidden" id="audit_idODT">
-
-    <div class="control-grid">
-      <div class="full">
-        <label>Auditado por</label>
-        <input id="audit_auditadoPor" readonly>
-      </div>
-
-      <div class="full">
-        <label>Errores encontrados</label>
-        <input id="audit_errores" readonly placeholder="Seleccione errores..." style="margin-bottom:8px;">
-        <div class="errores-grid" id="audit_errores_grid"></div>
-      </div>
-
-      <div class="full">
-        <label>Observaciones auditoría</label>
-        <textarea id="audit_observaciones" placeholder="Escriba las observaciones de auditoría..."></textarea>
-      </div>
-    </div>
-
-    <div class="modal-actions">
-      <button class="btn-modal btn-cancelar" onclick="cerrarModalAuditoria()">Cancelar</button>
-      <button class="btn-modal btn-guardar-auditoria" onclick="guardarAuditoria()"><i class="fas fa-save"></i> Guardar</button>
-    </div>
-  </div>
-</div>
-
-<script src="panelodt.js"></script>
-</body>
-</html>
+    cerrarModalAuditoria();
+    actualizarResumen();
+    renderizarTabla();
+    alert("Auditoría guardada correctamente. La ODT quedó en estado Auditado.");
+
+  } catch (error) {
+    console.error(error);
+    alert("Error guardando auditoría: " + error.message);
+  }
+}
+
+// =====================================================
+// UTILIDADES
+// =====================================================
+
+function buscarRegistro(idODT) {
+  return registrosPanel.find(function(row) {
+    return String(row.col_0 || "").trim() === String(idODT || "").trim();
+  });
+}
+
+function normalizarTexto(valor) {
+  return String(valor || "").trim().toUpperCase();
+}
+
+function escaparHTML(valor) {
+  return String(valor || "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
+function escaparAtributo(valor) {
+  return escaparHTML(valor).replace(/`/g, "&#096;");
+}
