@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-  <title>Lista ODT - APP DIST</title>
+  <title>ODT - APP DIST</title>
 
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
   <script src="config.js"></script>
@@ -135,29 +135,29 @@
       margin-bottom:18px;
     }
 
-    .search-box {
+    .btn-nueva-odt {
+      width:100%;
+      min-height:50px;
+      background:#27ae60;
+      color:#ffffff;
+      border:none;
+      border-radius:12px;
+      font-size:16px;
+      font-weight:900;
+      cursor:pointer;
       display:flex;
       align-items:center;
-      gap:8px;
-      background:#ffffff;
-      border:2px solid var(--blue-active);
-      border-radius:10px;
-      padding:0 12px;
-      box-shadow:0 0 10px rgba(96,165,250,.24);
+      justify-content:center;
+      gap:10px;
+      box-shadow:0 0 12px rgba(39,174,96,.35);
+      letter-spacing:.4px;
     }
 
-    .search-box i { color:#111827; }
-
-    .search-box input {
-      width:100%;
-      background:#ffffff;
-      color:#111827;
-      border:none;
-      padding:14px 4px;
-      font-size:16px;
-      font-weight:800;
-      outline:none;
-      box-sizing:border-box;
+    .btn-nueva-odt:hover,
+    .btn-nueva-odt:active {
+      background:#f59e0b;
+      color:#1a1200;
+      box-shadow:0 0 14px rgba(245,158,11,.5);
     }
 
     .filtros-flex {
@@ -208,12 +208,6 @@
       background:#27ae60;
       border-color:#2ecc71;
       box-shadow:0 0 12px rgba(39,174,96,.55);
-    }
-
-    .btn-filtro.activo[data-estado="Auditado"] {
-      background:#1e40af;
-      border-color:#3b82f6;
-      box-shadow:0 0 12px rgba(59,130,246,.55);
     }
 
     .mostrar-contenedor {
@@ -359,9 +353,7 @@
       border-color:#ff6b6b !important;
     }
 
-    .btn-pdf i {
-      color:#ff6b6b !important;
-    }
+    .btn-pdf i { color:#ff6b6b !important; }
 
     .btn-pdf:hover,
     .btn-pdf:active {
@@ -372,9 +364,7 @@
     }
 
     .btn-pdf:hover i,
-    .btn-pdf:active i {
-      color:#ffffff !important;
-    }
+    .btn-pdf:active i { color:#ffffff !important; }
 
     .badge {
       padding:5px 11px;
@@ -426,7 +416,7 @@
         <i class="fas fa-arrow-left"></i>
       </button>
 
-      <h1 class="app-title">LISTA ODT</h1>
+      <h1 class="app-title">ODT</h1>
 
       <div class="logo-mini">
         <img src="https://raw.githubusercontent.com/zelaya27/IMAGENES_AZ/main/UTCD%20Vertical.png" alt="Logo UTCD">
@@ -444,10 +434,9 @@
 
   <div class="container">
     <div class="panel-controles">
-      <div class="search-box">
-        <i class="fas fa-search"></i>
-        <input id="buscadorODT" type="text" placeholder="Buscar ODT..." autocomplete="off" oninput="renderizarTarjetas()">
-      </div>
+      <button type="button" class="btn-nueva-odt" onclick="nuevaODT()">
+        <i class="fas fa-plus-circle"></i> NUEVA ODT
+      </button>
 
       <div class="filtros-flex">
         <button class="btn-filtro activo" data-estado="Todas" onclick="filtrarEstado('Todas', this)">
@@ -458,9 +447,6 @@
         </button>
         <button class="btn-filtro" data-estado="Terminado" onclick="filtrarEstado('Terminado', this)">
           <i class="fas fa-check-double"></i> Terminadas
-        </button>
-        <button class="btn-filtro" data-estado="Auditado" onclick="filtrarEstado('Auditado', this)">
-          <i class="fas fa-shield-halved"></i> Auditadas
         </button>
       </div>
 
@@ -508,6 +494,10 @@
       window.location.href = "index.html";
     }
 
+    function nuevaODT() {
+      window.location.href = "odt.html";
+    }
+
     async function cargarODT() {
       const contenedor = document.getElementById("contenedor-registros");
       contenedor.innerHTML = '<div class="mensaje-lista"><i class="fas fa-spinner fa-spin fa-2x" style="color:var(--blue-active)"></i><p>Cargando ODT...</p></div>';
@@ -551,20 +541,22 @@
 
     function renderizarTarjetas() {
       const contenedor = document.getElementById("contenedor-registros");
-      const textoBusqueda = normalizarTexto(document.getElementById("buscadorODT").value || "");
       const limitSelector = document.getElementById("limitSelector");
       let datos = registrosGlobales.slice();
 
       if (filtroEstadoActual !== "Todas") {
         datos = datos.filter(function(row) {
-          return normalizarTexto(row.col_3 || "Pendiente") === normalizarTexto(filtroEstadoActual);
-        });
-      }
+          const estadoNorm = normalizarTexto(row.col_3 || "Pendiente");
 
-      if (textoBusqueda) {
-        datos = datos.filter(function(row) {
-          const busqueda = [row.col_0, row.col_4, row.col_8].join(" ");
-          return normalizarTexto(busqueda).includes(textoBusqueda);
+          if (filtroEstadoActual === "Pendiente") {
+            return estadoNorm !== "TERMINADO" && estadoNorm !== "AUDITADO";
+          }
+
+          if (filtroEstadoActual === "Terminado") {
+            return estadoNorm === "TERMINADO" || estadoNorm === "AUDITADO";
+          }
+
+          return true;
         });
       }
 
@@ -625,9 +617,6 @@
     }
 
     function obtenerIconoEstado(estado) {
-      const e = normalizarTexto(estado);
-      if (e === "TERMINADO") return "<i class='fas fa-circle'></i>";
-      if (e === "AUDITADO") return "<i class='fas fa-circle'></i>";
       return "<i class='fas fa-circle'></i>";
     }
 
