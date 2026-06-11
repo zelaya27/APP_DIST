@@ -161,13 +161,43 @@ function configurarCanvasFirma(){ const canvas=document.getElementById("canvasFi
 function limpiarFirmaCanvas(){ const c=document.getElementById("canvasFirma"), ctx=c.getContext("2d"); ctx.clearRect(0,0,c.width,c.height); }
 function guardarFirmaModal(){ const nombre=document.getElementById("nombreFirma").value.trim(); if(!nombre){alert("Debe escribir el nombre.");return;} const firma=document.getElementById("canvasFirma").toDataURL("image/png"); if(tipoFirmaActual==="preparacion"){ document.getElementById("col_10").value=fechaHoy(); document.getElementById("col_11").value=nombre; document.getElementById("col_12").value=firma; document.getElementById("col_3").value="Preparado"; document.getElementById("previewFirmaPrep").innerHTML="Firma preparación capturada"; } else { document.getElementById("col_13").value=fechaHoy(); document.getElementById("col_14").value=nombre; document.getElementById("col_15").value=firma; document.getElementById("col_3").value="Recibido"; document.getElementById("previewFirmaRec").innerHTML="Firma recibido capturada"; } formularioSucio=true; cerrarModalFirma(); actualizarPermisosVisuales(); }
 
-function actualizarPermisosVisuales(){
-  const estado=norm(document.getElementById("col_3").value);
-  document.getElementById("boxFirmaPrep").style.display = (tipoUsuarioSesion==="1"||tipoUsuarioSesion==="2") ? "block" : "none";
-  document.getElementById("boxFirmaRec").style.display = (tipoUsuarioSesion==="3" && estado==="PREPARADO") ? "block" : "none";
-  if(tipoUsuarioSesion!=="1"){ document.getElementById("col_4").classList.remove("selector"); }
-  if(tipoUsuarioSesion==="3"){ document.getElementById("col_6").classList.remove("selector"); }
-  if(["RECIBIDO","TERMINADO","AUDITADO"].includes(estado)){ document.getElementById("btnGuardarTraslado").disabled=true; document.getElementById("btnGuardarTraslado").style.opacity=.65; }
+function actualizarPermisosVisuales() {
+  const estado = norm(document.getElementById("col_3").value);
+  const btnGuardar = document.getElementById("btnGuardarTraslado");
+
+  document.getElementById("boxFirmaPrep").style.display =
+    (tipoUsuarioSesion === "1" || tipoUsuarioSesion === "2") ? "block" : "none";
+
+  document.getElementById("boxFirmaRec").style.display =
+    (tipoUsuarioSesion === "3" && estado === "PREPARADO") ? "block" : "none";
+
+  if (tipoUsuarioSesion !== "1") {
+    document.getElementById("col_4").classList.remove("selector");
+  }
+
+  if (tipoUsuarioSesion === "3") {
+    document.getElementById("col_6").classList.remove("selector");
+  }
+
+  const puedeGuardarRecibidoTipo3 =
+    tipoUsuarioSesion === "3" &&
+    estado === "RECIBIDO" &&
+    document.getElementById("col_15").value.trim() !== "";
+
+  if (estado === "TERMINADO" || estado === "AUDITADO") {
+    btnGuardar.disabled = true;
+    btnGuardar.style.opacity = .65;
+    return;
+  }
+
+  if (estado === "RECIBIDO" && !puedeGuardarRecibidoTipo3) {
+    btnGuardar.disabled = true;
+    btnGuardar.style.opacity = .65;
+    return;
+  }
+
+  btnGuardar.disabled = false;
+  btnGuardar.style.opacity = 1;
 }
 
 async function cargarTrasladoEditar(id){
