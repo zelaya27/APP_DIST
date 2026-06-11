@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Panel Traslados - APP DIST</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+  <script src="config.js"></script>
+  <style>
+    :root{--bg:#0b141d;--card:#14212d;--accent:#92400e;--amber:#f59e0b;--red:#e74c3c;--green:#27ae60;--blue:#2563eb;--text:#fff;--muted:#d8e2ee;--border:#3f5870;--input:#0b141d;--purple:#7c3aed}
+    *{box-sizing:border-box}
+    body{font-family:'Segoe UI',Arial,sans-serif;background:var(--bg);color:var(--text);margin:0;min-width:1180px}
+    header{background:linear-gradient(90deg,#14212d,#2a1d09);border-bottom:1px solid rgba(245,158,11,.45);padding:10px 20px;display:flex;align-items:center;justify-content:space-between;gap:18px;position:sticky;top:0;z-index:50}
+    .brand{display:flex;align-items:center;gap:14px}.logo-box{background:#fff;padding:5px 10px;border-radius:4px}.logo-box img{height:32px;display:block}.brand h2{margin:0;font-size:20px;letter-spacing:.7px}.top-user-info{display:flex;gap:14px;align-items:center;font-size:13px}.top-user-info span span{color:var(--amber);font-weight:900}.btn-logout{background:var(--red);color:#fff;border:none;padding:8px 13px;border-radius:4px;cursor:pointer;font-weight:800}
+    .container{max-width:1880px;margin:18px auto;padding:0 18px 25px}.resumen-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}.resumen-card{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:12px 14px;box-shadow:0 3px 6px rgba(0,0,0,.24)}.resumen-title{font-weight:900;color:#fff;margin-bottom:10px;display:flex;align-items:center;gap:8px}.resumen-items{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.resumen-mini{background:#0b141d;border:1px solid #263a4d;border-radius:6px;padding:8px 10px;display:flex;justify-content:space-between;align-items:center}.resumen-mini span:first-child{color:#d8e2ee;font-size:12px;font-weight:800}.resumen-mini span:last-child{font-size:18px;font-weight:900;color:#fff}
+    .panel-box{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:14px;box-shadow:0 4px 6px rgba(0,0,0,.28)}.filtros-panel{display:grid;grid-template-columns:80px 145px 150px 135px 135px 1fr 1fr 150px 110px;gap:10px;align-items:end;border-bottom:1px solid var(--border);padding-bottom:14px;margin-bottom:12px}.filtro-grupo{display:flex;flex-direction:column;gap:5px}.filtro-grupo label{font-size:12px;color:var(--muted);font-weight:800;white-space:nowrap}.input-filtro{width:100%;padding:8px 10px;border-radius:5px;background:var(--input);color:#fff;border:1px solid var(--border);font-size:13px;outline:none;min-height:34px;color-scheme:dark}.input-filtro:focus{border-color:var(--amber);box-shadow:0 0 0 2px rgba(245,158,11,.18)}
+    .btn{border:none;border-radius:5px;padding:8px 11px;cursor:pointer;color:#fff;font-weight:900;min-height:34px;display:inline-flex;align-items:center;justify-content:center;gap:6px}.btn:disabled{opacity:.45;cursor:not-allowed}.btn-limpiar{background:#34495e}.btn-limpiar:hover{background:var(--red)}.table-responsive{overflow-x:auto}table{width:100%;border-collapse:collapse;margin-top:8px;table-layout:auto}th,td{padding:10px 9px;text-align:left;border-bottom:1px solid var(--border);font-size:13px;vertical-align:middle;line-height:1.25}th{background:var(--accent);color:#fff;font-weight:900}tbody tr:hover{background:#5a3c08}.badge{padding:5px 9px;border-radius:14px;font-size:12px;font-weight:900;white-space:nowrap}.badge.sol{background:#7c5208;color:#fde68a}.badge.prep{background:#1e40af;color:#bfdbfe}.badge.rec{background:#065f46;color:#bbf7d0}.badge.term{background:#166534;color:#dcfce7}.badge.aud{background:#4c1d95;color:#ddd6fe}.acciones{display:flex;justify-content:flex-start;align-items:center;gap:6px;white-space:nowrap;flex-wrap:wrap}.btn-pdf{background:#dc2626}.btn-ver{background:#475569}.btn-control{background:#f59e0b;color:#1a1200}.btn-auditar{background:#2563eb}.btn-eliminar{background:#e74c3c}
+    .modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.76);z-index:200;justify-content:center;align-items:center;padding:20px}.modal{width:100%;max-width:760px;background:var(--card);border:1px solid var(--border);border-radius:10px;box-shadow:0 12px 30px rgba(0,0,0,.55);padding:18px}.modal h3{margin:0 0 14px;padding-bottom:10px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px}.control-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px 16px;align-items:end}.full{grid-column:1/-1}.modal label{display:block;color:#fff;font-size:13px;font-weight:800;margin-bottom:5px}.modal input,.modal textarea{width:100%;background:#0b141d;color:#fff;border:1px solid var(--border);border-radius:6px;padding:9px 10px;font-size:14px;outline:none;color-scheme:dark}.modal input[readonly]{background:#101a24;color:#f59e0b;font-weight:900}.modal textarea{min-height:120px;resize:vertical}.modal-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:16px}.btn-cancelar{background:#34495e}.btn-guardar{background:#27ae60}.btn-guardar-auditoria{background:#2563eb}.errores-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.error-op{background:#0b141d;color:#d8e2ee;border:1px solid var(--border);border-radius:7px;padding:9px 10px;cursor:pointer;font-weight:800;text-align:center;user-select:none}.error-op.activo{background:#2563eb;color:#fff;border-color:#60a5fa;box-shadow:0 0 10px rgba(96,165,250,.35)}
+  </style>
+</head>
+<body>
+<header>
+  <div class="brand"><div class="logo-box"><img src="https://raw.githubusercontent.com/zelaya27/IMAGENES_AZ/main/UTCD%20Vertical.png" alt="Logo UTCD"></div><h2><i class="fas fa-right-left"></i> PANEL TRASLADOS</h2></div>
+  <div class="top-user-info"><span><i class="fas fa-user-circle"></i> <span id="nombreUsuario">Usuario</span></span><span>|</span><span><i class="fas fa-map-marker-alt"></i> <span id="nombreSector">Sector</span></span><button class="btn-logout" onclick="cerrarSesion()"><i class="fas fa-sign-out-alt"></i> Salir</button></div>
+</header>
+
+<div class="container">
+  <div class="resumen-row">
+    <div class="resumen-card">
+      <div class="resumen-title"><i class="fas fa-box-open" style="color:#2ecc71"></i> Recibidos por tipo</div>
+      <div class="resumen-items">
+        <div class="resumen-mini"><span>Operaciones</span><span id="recOperaciones">0</span></div>
+        <div class="resumen-mini"><span>Incidencias</span><span id="recIncidencias">0</span></div>
+        <div class="resumen-mini"><span>Mantenimiento</span><span id="recMantenimiento">0</span></div>
+      </div>
+    </div>
+    <div class="resumen-card">
+      <div class="resumen-title"><i class="fas fa-check-double" style="color:#f59e0b"></i> Terminados / Auditados por tipo</div>
+      <div class="resumen-items">
+        <div class="resumen-mini"><span>Operaciones</span><span id="termOperaciones">0</span></div>
+        <div class="resumen-mini"><span>Incidencias</span><span id="termIncidencias">0</span></div>
+        <div class="resumen-mini"><span>Mantenimiento</span><span id="termMantenimiento">0</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel-box">
+    <div class="filtros-panel">
+      <div class="filtro-grupo"><label>Mostrar</label><select id="limitSelector" class="input-filtro" onchange="renderizarTabla()"><option value="10">10</option><option value="20">20</option><option value="50">50</option><option value="ALL">Todos</option></select></div>
+      <div class="filtro-grupo"><label>Estado</label><select id="filtroEstado" class="input-filtro" onchange="renderizarTabla()"><option value="ALL">Todos</option><option>Solicitado</option><option>Preparado</option><option>Recibido</option><option>Terminado</option><option>Auditado</option></select></div>
+      <div class="filtro-grupo"><label>Tipo</label><select id="filtroTipo" class="input-filtro" onchange="renderizarTabla()"><option value="ALL">Todos</option><option>Operaciones</option><option>Incidencias</option><option>Mantenimiento</option></select></div>
+      <div class="filtro-grupo"><label>Desde</label><input type="date" id="fechaDesde" class="input-filtro" onchange="renderizarTabla()"></div>
+      <div class="filtro-grupo"><label>Hasta</label><input type="date" id="fechaHasta" class="input-filtro" onchange="renderizarTabla()"></div>
+      <div class="filtro-grupo"><label>Buscar ID traslado</label><input id="buscadorID" class="input-filtro" oninput="renderizarTabla()"></div>
+      <div class="filtro-grupo"><label>Buscar cuadrilla recibe</label><input id="buscadorRecibe" class="input-filtro" oninput="renderizarTabla()"></div>
+      <div class="filtro-grupo"><label>ID ENERGIS</label><input id="buscadorEnergis" class="input-filtro" oninput="renderizarTabla()"></div>
+      <button class="btn btn-limpiar" onclick="limpiarFiltros()"><i class="fas fa-times"></i> Limpiar</button>
+    </div>
+
+    <div class="table-responsive">
+      <table>
+        <thead><tr><th>ID traslado</th><th>Estado</th><th>Tipo</th><th>Fecha recibido</th><th>Cuadrilla recibe</th><th>Fecha ENERGIS</th><th>ID ENERGIS</th><th>Usuario ENERGIS</th><th>Acciones</th></tr></thead>
+        <tbody id="tablaTraslados"><tr><td colspan="9">Cargando...</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<div class="modal-bg" id="modalControl">
+  <div class="modal">
+    <h3><i class="fas fa-sliders"></i> Control ENERGIS</h3>
+    <input type="hidden" id="ctrl_id">
+    <div class="control-grid">
+      <div><label>ID traslado</label><input id="ctrl_id_text" readonly></div>
+      <div><label>Fecha recibido</label><input id="ctrl_fecha_recibido" readonly></div>
+      <div><label>Fecha traslado ENERGIS</label><input type="date" id="ctrl_fecha_energis"></div>
+      <div><label>ID traslado ENERGIS</label><input id="ctrl_id_energis" placeholder="Ingrese ID de ENERGIS"></div>
+      <div class="full"><label>Usuario ENERGIS</label><input id="ctrl_usuario_energis" readonly></div>
+    </div>
+    <div class="modal-actions"><button class="btn btn-cancelar" onclick="cerrarControl()">Cancelar</button><button class="btn btn-guardar" onclick="guardarControl()"><i class="fas fa-save"></i> Guardar</button></div>
+  </div>
+</div>
+
+<div class="modal-bg" id="modalAuditoria">
+  <div class="modal">
+    <h3><i class="fas fa-magnifying-glass"></i> Auditoría traslado</h3>
+    <input type="hidden" id="audit_id">
+    <div class="control-grid">
+      <div class="full"><label>Auditado por</label><input id="audit_usuario" readonly></div>
+      <div class="full"><label>Errores encontrados</label><input id="audit_errores" readonly style="margin-bottom:8px;"><div class="errores-grid" id="audit_grid"></div></div>
+      <div class="full"><label>Observaciones auditoría</label><textarea id="audit_obs"></textarea></div>
+    </div>
+    <div class="modal-actions"><button class="btn btn-cancelar" onclick="cerrarAuditoria()">Cancelar</button><button class="btn btn-guardar-auditoria" onclick="guardarAuditoria()"><i class="fas fa-save"></i> Guardar</button></div>
+  </div>
+</div>
+
+<script src="paneltraslados.js"></script>
+</body>
+</html>
