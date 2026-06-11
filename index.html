@@ -75,6 +75,7 @@
       top: 50%;
       transform: translateY(-50%);
       color: var(--muted-text);
+      z-index: 2;
     }
 
     .input-group input {
@@ -138,6 +139,73 @@
       display: none;
       font-weight: bold;
     }
+
+    /* ===============================
+       SELECT PERSONALIZADO
+    =============================== */
+
+    .custom-select-group {
+      position: relative;
+    }
+
+    .custom-select-group input {
+      cursor: pointer;
+    }
+
+    .custom-dropdown {
+      display: none;
+      position: absolute;
+      top: 48px;
+      left: 0;
+      right: 0;
+      background: var(--card-color);
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      z-index: 1000;
+      max-height: 240px;
+      overflow-y: auto;
+      box-shadow: 0 8px 14px rgba(0,0,0,0.45);
+    }
+
+    .custom-dropdown.show {
+      display: block;
+    }
+
+    .dropdown-search {
+      width: 100%;
+      padding: 10px 12px !important;
+      box-sizing: border-box;
+      background: var(--bg-color) !important;
+      border: none !important;
+      border-bottom: 1px solid var(--border-color) !important;
+      border-radius: 0 !important;
+      color: var(--text-color) !important;
+      outline: none;
+      font-size: 14px;
+      cursor: text !important;
+    }
+
+    .dropdown-option {
+      padding: 11px 12px;
+      cursor: pointer;
+      color: var(--text-color);
+      font-size: 14px;
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+    }
+
+    .dropdown-option:hover,
+    .dropdown-option.selected {
+      background: var(--hover-color);
+      color: #fff;
+      font-weight: bold;
+    }
+
+    .dropdown-empty {
+      padding: 12px;
+      color: var(--muted-text);
+      font-size: 13px;
+      text-align: center;
+    }
   </style>
 </head>
 
@@ -151,14 +219,33 @@
 
     <h2 class="login-title">APP ODT-MATERIALES</h2>
 
-    <div class="input-group">
-      <i class="fas fa-user icon-left"></i>
-      <input type="text" id="user" placeholder="Usuario" autocomplete="off">
+    <!-- SECTOR -->
+    <div class="input-group custom-select-group">
+      <i class="fas fa-map-marker-alt icon-left"></i>
+      <input type="text" id="sector" placeholder="Seleccione sector" autocomplete="off" readonly onclick="abrirDropdown('sector')">
+
+      <div class="custom-dropdown" id="dropdown-sector">
+        <input type="text" class="dropdown-search" placeholder="Buscar sector..." onkeyup="filtrarDropdown('sector')" onclick="event.stopPropagation()">
+        <div id="lista-sector"></div>
+      </div>
     </div>
 
+    <!-- USUARIO -->
+    <div class="input-group custom-select-group">
+      <i class="fas fa-user icon-left"></i>
+      <input type="text" id="user" placeholder="Seleccione usuario" autocomplete="off" readonly onclick="abrirDropdown('user')">
+
+      <div class="custom-dropdown" id="dropdown-user">
+        <input type="text" class="dropdown-search" placeholder="Buscar usuario..." onkeyup="filtrarDropdown('user')" onclick="event.stopPropagation()">
+        <div id="lista-user"></div>
+      </div>
+    </div>
+
+    <!-- CONTRASEÑA -->
     <div class="input-group">
       <i class="fas fa-lock icon-left"></i>
       <input type="password" id="pass" placeholder="Contraseña">
+
       <button type="button" class="btn-toggle-pass" onclick="togglePassword()">
         <i class="fas fa-eye" id="eye-icon"></i>
       </button>
@@ -174,6 +261,36 @@
   </div>
 
   <script>
+    // ===============================
+    // LISTA FIJA DE SECTORES
+    // ===============================
+    const SECTORES = [
+      "BRUS LAGUNA",
+      "CHOLUTECA",
+      "COMAYAGUA",
+      "DANLI",
+      "EL PROGRESO",
+      "GUANAJA",
+      "JUTICALPA",
+      "LA CEIBA",
+      "SAN PEDRO SULA CENTRO",
+      "SANTA CRUZ DE YOJOA",
+      "SANTA ROSA DE COPAN",
+      "TEGUCIGALPA",
+      "TOCOA",
+      "VILLANUEVA",
+      "SANTA BARBARA"
+    ];
+
+    let usuariosSector = [];
+
+    document.addEventListener("DOMContentLoaded", function() {
+      pintarOpciones("sector", SECTORES);
+    });
+
+    // ===============================
+    // MOSTRAR / OCULTAR CONTRASEÑA
+    // ===============================
     function togglePassword() {
       const p = document.getElementById("pass");
       const icon = document.getElementById("eye-icon");
@@ -189,14 +306,134 @@
       }
     }
 
+    // ===============================
+    // DROPDOWN PERSONALIZADO
+    // ===============================
+    function abrirDropdown(tipo) {
+      document.querySelectorAll(".custom-dropdown").forEach(d => d.classList.remove("show"));
+
+      if (tipo === "user" && !document.getElementById("sector").value.trim()) {
+        mostrarError("Primero selecciona un sector.");
+        return;
+      }
+
+      const dropdown = document.getElementById("dropdown-" + tipo);
+      dropdown.classList.add("show");
+
+      const search = dropdown.querySelector(".dropdown-search");
+      search.value = "";
+      setTimeout(() => search.focus(), 100);
+
+      if (tipo === "sector") {
+        pintarOpciones("sector", SECTORES);
+      } else {
+        pintarOpciones("user", usuariosSector);
+      }
+    }
+
+    function pintarOpciones(tipo, lista) {
+      const contenedor = document.getElementById("lista-" + tipo);
+      const valorActual = document.getElementById(tipo).value.trim();
+
+      contenedor.innerHTML = "";
+
+      if (!lista || lista.length === 0) {
+        contenedor.innerHTML = '<div class="dropdown-empty">Sin resultados</div>';
+        return;
+      }
+
+      lista.forEach(valor => {
+        const div = document.createElement("div");
+        div.className = "dropdown-option";
+
+        if (valor === valorActual) {
+          div.classList.add("selected");
+        }
+
+        div.innerText = valor;
+
+        div.onclick = function(e) {
+          e.stopPropagation();
+          seleccionarOpcion(tipo, valor);
+        };
+
+        contenedor.appendChild(div);
+      });
+    }
+
+    function filtrarDropdown(tipo) {
+      const input = document.querySelector("#dropdown-" + tipo + " .dropdown-search");
+      const filtro = input.value.toUpperCase().trim();
+
+      const listaBase = tipo === "sector" ? SECTORES : usuariosSector;
+
+      const filtrados = listaBase.filter(item =>
+        item.toString().toUpperCase().includes(filtro)
+      );
+
+      pintarOpciones(tipo, filtrados);
+    }
+
+    async function seleccionarOpcion(tipo, valor) {
+      document.getElementById(tipo).value = valor;
+      document.getElementById("dropdown-" + tipo).classList.remove("show");
+
+      ocultarError();
+
+      if (tipo === "sector") {
+        document.getElementById("user").value = "";
+        usuariosSector = [];
+        pintarOpciones("user", []);
+
+        await cargarUsuariosPorSector(valor);
+      }
+    }
+
+    // ===============================
+    // CARGAR USUARIOS SEGÚN SECTOR
+    // ===============================
+    async function cargarUsuariosPorSector(sector) {
+      try {
+        const response = await fetch(CONFIG.URL_APPS_SCRIPT, {
+          method: "POST",
+          mode: "cors",
+          body: JSON.stringify({
+            action: "getUsuariosPorSector",
+            sector: sector
+          })
+        });
+
+        const data = await response.json();
+
+        if (data.ok) {
+          usuariosSector = data.usuarios || [];
+          pintarOpciones("user", usuariosSector);
+
+          if (usuariosSector.length === 0) {
+            mostrarError("No hay usuarios registrados para este sector.");
+          }
+        } else {
+          mostrarError(data.error || "No se pudieron cargar los usuarios.");
+        }
+
+      } catch (error) {
+        console.error("Error cargando usuarios:", error);
+        mostrarError("Error cargando usuarios del sector.");
+      }
+    }
+
+    // ===============================
+    // LOGIN
+    // ===============================
     async function iniciarSesion() {
+      const sector = document.getElementById("sector").value.trim();
       const user = document.getElementById("user").value.trim();
       const pass = document.getElementById("pass").value.trim();
       const btn = document.getElementById("btn-login");
       const errorMsg = document.getElementById("mensaje-error");
 
-      if (!user || !pass) {
-        errorMsg.innerText = "Por favor, completa usuario y contraseña.";
+      if (!sector || !user || !pass) {
+        errorMsg.innerText = "Por favor, completa sector, usuario y contraseña.";
         errorMsg.style.display = "block";
         return;
       }
@@ -207,6 +444,7 @@
 
       const datosJSON = {
         action: "login",
+        sector: sector,
         user: user,
         pass: pass
       };
@@ -243,6 +481,33 @@
       }
     }
 
+    // ===============================
+    // MENSAJES
+    // ===============================
+    function mostrarError(texto) {
+      const errorMsg = document.getElementById("mensaje-error");
+      errorMsg.innerText = texto;
+      errorMsg.style.display = "block";
+    }
+
+    function ocultarError() {
+      const errorMsg = document.getElementById("mensaje-error");
+      errorMsg.innerText = "";
+      errorMsg.style.display = "none";
+    }
+
+    // ===============================
+    // CERRAR DROPDOWN AL HACER CLICK FUERA
+    // ===============================
+    document.addEventListener("click", function(e) {
+      if (!e.target.closest(".custom-select-group")) {
+        document.querySelectorAll(".custom-dropdown").forEach(d => d.classList.remove("show"));
+      }
+    });
+
+    // ===============================
+    // ENTER PARA LOGIN
+    // ===============================
     document.addEventListener("keypress", function(event) {
       if (event.key === "Enter") {
         iniciarSesion();
