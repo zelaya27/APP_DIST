@@ -1,12 +1,166 @@
-let trasladosGlobales=[]; let estadoFiltro="Todos";
-const usuarioSesion=sessionStorage.getItem("usuario")||"", sectorSesion=sessionStorage.getItem("sector")||"", tipoUsuarioSesion=String(sessionStorage.getItem("tipo_usuario")||"").trim(), numeroCuadrillaSesion=String(sessionStorage.getItem("numero_cuadrilla")||sessionStorage.getItem("cuadrilla")||"").trim();
-document.addEventListener("DOMContentLoaded",()=>{ if(!usuarioSesion){window.location.href="index.html";return;} document.getElementById("usuarioHeader").textContent=usuarioSesion; document.getElementById("sectorHeader").textContent=sectorSesion; cargarTraslados(); });
-function nuevoTraslado(){ window.location.href="traslados.html"; }
-async function cargarTraslados(){ const cont=document.getElementById("contenedorTraslados"); cont.innerHTML='<div class="msg"><i class="fas fa-spinner fa-spin"></i> Cargando traslados...</div>'; try{ const res=await fetch(CONFIG.URL_APPS_SCRIPT,{method:"POST",mode:"cors",body:JSON.stringify({action:"obtenerListaTraslados",usuario:usuarioSesion,tipo_usuario:tipoUsuarioSesion,sector:sectorSesion,numero_cuadrilla:numeroCuadrillaSesion})}); const data=await res.json(); if(data.status!=="Éxito") throw new Error(data.message||"No se pudo cargar."); trasladosGlobales=data.traslados||[]; renderizarTraslados(); }catch(e){cont.innerHTML='<div class="msg" style="color:#ff9a9a;">Error: '+escapeHTML(e.message)+'</div>';}}
-function filtrarEstado(e,btn){estadoFiltro=e; document.querySelectorAll(".filter-btn").forEach(b=>b.classList.remove("active")); btn.classList.add("active"); renderizarTraslados();}
-function renderizarTraslados(){ const cont=document.getElementById("contenedorTraslados"), texto=norm(document.getElementById("buscador").value), limit=document.getElementById("limitSelector").value; let datos=trasladosGlobales.slice(); if(estadoFiltro!=="Todos") datos=datos.filter(r=>norm(r.col_3)===norm(estadoFiltro)); if(texto) datos=datos.filter(r=>norm([r.col_0,r.col_4,r.col_6,r.col_21,r.col_23].join(" ")).includes(texto)); if(limit!=="ALL") datos=datos.slice(0,Number(limit)); cont.innerHTML=""; if(!datos.length){cont.innerHTML='<div class="msg">No hay traslados para mostrar.</div>';return;} datos.forEach(row=>{ const estado=String(row.col_3||"Solicitado").trim(), url=String(row.col_16||"").trim(); const bloqueado=["RECIBIDO","TERMINADO","AUDITADO"].includes(norm(estado)); const card=document.createElement("div"); card.className="registro-card"; card.innerHTML=`<div class="registro-header"><span class="registro-id"><i class="fas fa-hashtag"></i> ${escapeHTML(row.col_0)}</span><span class="badge ${claseEstado(estado)}"><i class="fas fa-circle"></i> ${escapeHTML(estado)}</span></div><div class="registro-body"><p><b>Tipo:</b> ${escapeHTML(row.col_23||"Sin tipo")}</p><p><b>Fecha solicitud:</b> ${escapeHTML(row.col_8||"")}</p><p><b>Entrega:</b> ${escapeHTML(row.col_4||"")} - ${escapeHTML(row.col_5||"")}</p><p><b>Recibe:</b> ${escapeHTML(row.col_6||"")} - ${escapeHTML(row.col_7||"")}</p><p><b>ENERGIS:</b> ${escapeHTML(row.col_21||"Pendiente")} | ${escapeHTML(row.col_20||"")}</p></div><div class="registro-footer"><button class="btn ${url?'btn-gray':'btn-red'}" onclick="${url?`verPDF('${escapeAttr(url)}')`:`generarPDF('${escapeAttr(row.col_0)}')`}"><i class="fas fa-file-pdf"></i> ${url?'Ver PDF':'Crear PDF'}</button><button class="btn btn-main" ${bloqueado?'disabled style="opacity:.55"':''} onclick="editarTraslado('${escapeAttr(row.col_0)}','${escapeAttr(estado)}')"><i class="fas ${bloqueado?'fa-lock':'fa-pen'}"></i> Editar</button></div>`; cont.appendChild(card); }); }
-function editarTraslado(id,estado){ if(["RECIBIDO","TERMINADO","AUDITADO"].includes(norm(estado))){alert("Este traslado ya no se puede editar porque está en estado " + estado + "."); return;} window.location.href="traslados.html?id="+encodeURIComponent(id)+"&modo=editar"; }
-async function generarPDF(id){ try{ const res=await fetch(CONFIG.URL_APPS_SCRIPT,{method:"POST",mode:"cors",body:JSON.stringify({action:"generarPDFTraslado",idTraslado:id})}); const data=await res.json(); if(data.status!=="Éxito") throw new Error(data.message||"No se pudo generar PDF."); await cargarTraslados(); window.open(data.url,"_blank","noopener"); }catch(e){alert("Error generando PDF: "+e.message);} }
-function verPDF(url){ window.open(url,"_blank","noopener"); }
-function claseEstado(e){ e=norm(e); if(e==="PREPARADO")return"badge-preparado"; if(e==="RECIBIDO")return"badge-recibido"; if(e==="TERMINADO")return"badge-terminado"; if(e==="AUDITADO")return"badge-auditado"; return"badge-solicitado"; }
-function norm(v){return String(v||"").trim().toUpperCase();} function escapeHTML(v){return String(v||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/\"/g,"&quot;").replace(/'/g,"&#039;");} function escapeAttr(v){return escapeHTML(v).replace(/`/g,"&#096;");}
+let trasladosGlobales = [];
+let estadoFiltro = "Todos";
+
+const usuarioSesion = sessionStorage.getItem("usuario") || "";
+const sectorSesion = sessionStorage.getItem("sector") || "";
+const tipoUsuarioSesion = String(sessionStorage.getItem("tipo_usuario") || "").trim();
+const numeroCuadrillaSesion = String(sessionStorage.getItem("numero_cuadrilla") || sessionStorage.getItem("cuadrilla") || "").trim();
+
+document.addEventListener("DOMContentLoaded", function() {
+  if (!usuarioSesion) {
+    window.location.href = "index.html";
+    return;
+  }
+
+  document.getElementById("usuarioHeader").textContent = usuarioSesion;
+  document.getElementById("sectorHeader").textContent = sectorSesion;
+  cargarTraslados();
+});
+
+function nuevoTraslado() {
+  window.location.href = "traslados.html";
+}
+
+async function cargarTraslados() {
+  const cont = document.getElementById("contenedorTraslados");
+  cont.innerHTML = '<div class="msg"><i class="fas fa-spinner fa-spin"></i> Cargando traslados...</div>';
+
+  try {
+    const res = await fetch(CONFIG.URL_APPS_SCRIPT, {
+      method: "POST",
+      mode: "cors",
+      body: JSON.stringify({
+        action: "obtenerListaTraslados",
+        usuario: usuarioSesion,
+        tipo_usuario: tipoUsuarioSesion,
+        sector: sectorSesion,
+        numero_cuadrilla: numeroCuadrillaSesion,
+        cuadrilla: numeroCuadrillaSesion
+      })
+    });
+
+    const data = await res.json();
+    if (data.status !== "Éxito") throw new Error(data.message || "No se pudo cargar la lista.");
+
+    trasladosGlobales = data.traslados || [];
+    renderizarTraslados();
+  } catch (e) {
+    cont.innerHTML = '<div class="msg" style="color:#ff9a9a;">Error: ' + escapeHTML(e.message) + '</div>';
+  }
+}
+
+function filtrarEstado(estado, btn) {
+  estadoFiltro = estado;
+  document.querySelectorAll(".filter-btn").forEach(b => b.classList.remove("active"));
+  btn.classList.add("active");
+  renderizarTraslados();
+}
+
+function renderizarTraslados() {
+  const cont = document.getElementById("contenedorTraslados");
+  const limit = document.getElementById("limitSelector").value;
+  let datos = trasladosGlobales.slice();
+
+  if (estadoFiltro !== "Todos") {
+    datos = datos.filter(r => norm(r.col_3) === norm(estadoFiltro));
+  }
+
+  if (limit !== "ALL") datos = datos.slice(0, Number(limit));
+
+  cont.innerHTML = "";
+
+  if (!datos.length) {
+    cont.innerHTML = '<div class="msg">No hay traslados para mostrar.</div>';
+    return;
+  }
+
+  datos.forEach(function(row) {
+    const estado = String(row.col_3 || "Solicitado").trim();
+    const url = String(row.col_16 || "").trim();
+    const bloqueado = ["RECIBIDO", "TERMINADO", "AUDITADO"].includes(norm(estado));
+
+    const card = document.createElement("div");
+    card.className = "registro-card";
+    card.innerHTML = `
+      <div class="registro-header">
+        <span class="registro-id"><i class="fas fa-hashtag"></i> ${escapeHTML(row.col_0)}</span>
+        <span class="badge ${claseEstado(estado)}"><i class="fas fa-circle"></i> ${escapeHTML(estado)}</span>
+      </div>
+
+      <div class="registro-body">
+        <p><b>Tipo:</b> ${escapeHTML(row.col_23 || "Sin tipo")}</p>
+        <p><b>Fecha solicitud:</b> ${escapeHTML(row.col_8 || "")}</p>
+        <p><b>Entrega:</b> ${escapeHTML(row.col_4 || "")} - ${escapeHTML(row.col_5 || "")}</p>
+        <p><b>Recibe:</b> ${escapeHTML(row.col_6 || "")} - ${escapeHTML(row.col_7 || "")}</p>
+        <p><b>ENERGIS:</b> ${escapeHTML(row.col_21 || "Pendiente")} ${row.col_20 ? "| " + escapeHTML(row.col_20) : ""}</p>
+      </div>
+
+      <div class="registro-footer">
+        <button class="btn ${url ? "btn-gray" : "btn-red"}" onclick="${url ? `verPDF('${escapeAttr(url)}')` : `generarPDF('${escapeAttr(row.col_0)}')`}">
+          <i class="fas fa-file-pdf"></i> ${url ? "Ver PDF" : "Crear PDF"}
+        </button>
+        <button class="btn btn-main" ${bloqueado ? 'disabled style="opacity:.55"' : ""} onclick="editarTraslado('${escapeAttr(row.col_0)}','${escapeAttr(estado)}')">
+          <i class="fas ${bloqueado ? "fa-lock" : "fa-pen"}"></i> Editar
+        </button>
+      </div>`;
+
+    cont.appendChild(card);
+  });
+}
+
+function editarTraslado(id, estado) {
+  if (["RECIBIDO", "TERMINADO", "AUDITADO"].includes(norm(estado))) {
+    alert("Este traslado ya no se puede editar porque está en estado " + estado + ".");
+    return;
+  }
+
+  window.location.href = "traslados.html?id=" + encodeURIComponent(id) + "&modo=editar";
+}
+
+async function generarPDF(id) {
+  try {
+    const res = await fetch(CONFIG.URL_APPS_SCRIPT, {
+      method: "POST",
+      mode: "cors",
+      body: JSON.stringify({ action: "generarPDFTraslado", idTraslado: id })
+    });
+
+    const data = await res.json();
+    if (data.status !== "Éxito") throw new Error(data.message || "No se pudo generar PDF.");
+
+    await cargarTraslados();
+    window.open(data.url, "_blank", "noopener");
+  } catch (e) {
+    alert("Error generando PDF: " + e.message);
+  }
+}
+
+function verPDF(url) {
+  window.open(url, "_blank", "noopener");
+}
+
+function claseEstado(e) {
+  e = norm(e);
+  if (e === "PREPARADO") return "badge-preparado";
+  if (e === "RECIBIDO") return "badge-recibido";
+  if (e === "TERMINADO") return "badge-terminado";
+  if (e === "AUDITADO") return "badge-auditado";
+  return "badge-solicitado";
+}
+
+function norm(v) {
+  return String(v || "").trim().toUpperCase();
+}
+
+function escapeHTML(v) {
+  return String(v || "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
+function escapeAttr(v) {
+  return escapeHTML(v).replace(/`/g, "&#096;");
+}

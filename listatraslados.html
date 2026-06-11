@@ -1,21 +1,48 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
   <title>Lista Traslados - APP DIST</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-  <link rel="stylesheet" href="traslados.css"><script src="config.js"></script>
+  <link rel="stylesheet" href="traslados.css">
+  <script src="config.js"></script>
 </head>
 <body>
-<header><div class="header-row"><button class="btn-back-header" onclick="window.location.href='menu.html'"><i class="fas fa-arrow-left"></i></button><h1 class="header-title">LISTA TRASLADOS</h1><i class="fas fa-right-left header-icon"></i></div><div class="header-sub"><span id="usuarioHeader">Usuario</span> | <span id="sectorHeader">Sector</span></div></header>
-<div class="container">
-  <button class="btn btn-main btn-full" onclick="nuevoTraslado()"><i class="fas fa-plus"></i> Nuevo traslado</button>
-  <div class="search-box"><i class="fas fa-search"></i><input id="buscador" placeholder="Buscar traslado, cuadrilla o ENERGIS..." oninput="renderizarTraslados()"></div>
-  <div class="filters" id="filtrosEstados">
-    <button class="filter-btn active" onclick="filtrarEstado('Todos',this)">Todos</button><button class="filter-btn" onclick="filtrarEstado('Solicitado',this)">Solicitado</button><button class="filter-btn" onclick="filtrarEstado('Preparado',this)">Preparado</button><button class="filter-btn" onclick="filtrarEstado('Recibido',this)">Recibido</button><button class="filter-btn" onclick="filtrarEstado('Terminado',this)">Terminado</button><button class="filter-btn" onclick="filtrarEstado('Auditado',this)">Auditado</button>
+  <header>
+    <div class="header-row">
+      <button class="btn-back-header" onclick="window.location.href='menu.html'"><i class="fas fa-arrow-left"></i></button>
+      <h1 class="header-title">LISTA TRASLADOS</h1>
+      <i class="fas fa-right-left header-icon"></i>
+    </div>
+    <div class="header-sub"><span id="usuarioHeader">Usuario</span> | <span id="sectorHeader">Sector</span></div>
+  </header>
+
+  <div class="container">
+    <button class="btn btn-main btn-full" onclick="nuevoTraslado()">
+      <i class="fas fa-plus"></i> Nuevo traslado
+    </button>
+
+    <div class="filters" id="filtrosEstados">
+      <button class="filter-btn active" onclick="filtrarEstado('Todos', this)">Todos</button>
+      <button class="filter-btn" onclick="filtrarEstado('Solicitado', this)">Solicitado</button>
+      <button class="filter-btn" onclick="filtrarEstado('Preparado', this)">Preparado</button>
+      <button class="filter-btn" onclick="filtrarEstado('Recibido', this)">Recibido</button>
+    </div>
+
+    <div class="form-group" style="margin-bottom:12px;">
+      <label>Mostrar</label>
+      <select id="limitSelector" onchange="renderizarTraslados()">
+        <option value="10">10 registros</option>
+        <option value="20">20 registros</option>
+        <option value="50">50 registros</option>
+        <option value="ALL">Todos</option>
+      </select>
+    </div>
+
+    <div id="contenedorTraslados" class="registro-grid"></div>
   </div>
-  <div class="form-group" style="margin-bottom:12px;"><label>Mostrar</label><select id="limitSelector" onchange="renderizarTraslados()"><option value="10">10 registros</option><option value="20">20 registros</option><option value="50">50 registros</option><option value="ALL">Todos</option></select></div>
-  <div id="contenedorTraslados" class="registro-grid"></div>
-</div>
-<script src="listatraslados.js"></script>
-</body></html>
+
+  <script src="listatraslados.js"></script>
+</body>
+</html>
