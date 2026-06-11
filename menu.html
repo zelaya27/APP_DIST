@@ -18,7 +18,7 @@
       --muted-text: #a0aec0;
       --border-color: #2c3e50;
       --blue-active: #3b82f6;
-      --blue-hover: #2b6cb0;
+      --orange-active: #f59e0b;
     }
 
     body {
@@ -112,62 +112,81 @@
 
     .menu-grid {
       display: grid;
-      grid-template-columns: 1fr;
-      gap: 18px;
-    }
-
-    @media (min-width: 700px) {
-      .menu-grid {
-        grid-template-columns: repeat(2, 1fr);
-      }
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
     }
 
     .menu-card {
       background-color: #1a2a3a;
       border: 1px solid var(--border-color);
       border-radius: 14px;
-      padding: 25px 20px;
+      padding: 22px 12px;
       cursor: pointer;
       text-align: center;
       transition: all 0.25s ease;
       box-shadow: 0 4px 8px rgba(0,0,0,0.25);
+      min-height: 145px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
     }
 
-    .menu-card:hover {
+    .menu-card:hover,
+    .menu-card:active {
       border-color: var(--blue-active);
       transform: translateY(-3px);
       box-shadow: 0 0 12px rgba(59, 130, 246, 0.35);
     }
 
+    .menu-card.traslado:hover,
+    .menu-card.traslado:active {
+      border-color: var(--orange-active);
+      box-shadow: 0 0 12px rgba(245, 158, 11, 0.35);
+    }
+
     .menu-icon {
-      width: 70px;
-      height: 70px;
+      width: 62px;
+      height: 62px;
       border-radius: 50%;
       background-color: rgba(59, 130, 246, 0.12);
       color: var(--blue-active);
       display: flex;
       align-items: center;
       justify-content: center;
-      margin: 0 auto 15px auto;
-      font-size: 30px;
+      margin: 0 auto 13px auto;
+      font-size: 28px;
       border: 1px solid rgba(59, 130, 246, 0.4);
+    }
+
+    .menu-card.traslado .menu-icon {
+      background-color: rgba(245, 158, 11, 0.14);
+      color: var(--orange-active);
+      border-color: rgba(245, 158, 11, 0.45);
     }
 
     .menu-card h3 {
       margin: 0 0 8px 0;
-      font-size: 20px;
+      font-size: 18px;
       color: white;
     }
 
     .menu-card p {
       margin: 0;
-      font-size: 14px;
+      font-size: 13px;
       color: var(--muted-text);
-      line-height: 1.4;
+      line-height: 1.35;
     }
 
     .hidden {
       display: none !important;
+    }
+
+    @media (max-width: 380px) {
+      .menu-grid { gap: 10px; }
+      .menu-card { padding: 18px 8px; min-height: 132px; }
+      .menu-icon { width: 54px; height: 54px; font-size: 24px; }
+      .menu-card h3 { font-size: 16px; }
+      .menu-card p { font-size: 12px; }
     }
   </style>
 </head>
@@ -209,38 +228,12 @@
 
     <div class="menu-grid">
 
-      <div class="menu-card" onclick="abrirPantalla('odt.html')">
+      <div class="menu-card" onclick="abrirPantalla('listaodt.html')">
         <div class="menu-icon">
           <i class="fas fa-hard-hat"></i>
         </div>
         <h3>ODT</h3>
-        <p>Registro móvil de órdenes de trabajo.</p>
-      </div>
-
-
-      <div class="menu-card" onclick="abrirPantalla('listaodt.html')">
-        <div class="menu-icon">
-          <i class="fas fa-list-check"></i>
-        </div>
-        <h3>LISTA ODT</h3>
-        <p>Consulta móvil de órdenes creadas, PDF y edición de pendientes.</p>
-      </div>
-
-
-      <div class="menu-card" onclick="abrirPantalla('listatraslados.html')">
-        <div class="menu-icon" style="background-color:rgba(245,158,11,.14);color:#f59e0b;border-color:rgba(245,158,11,.45);">
-          <i class="fas fa-right-left"></i>
-        </div>
-        <h3>TRASLADOS</h3>
-        <p>Solicitud y recepción móvil de traslados de materiales.</p>
-      </div>
-
-      <div class="menu-card hidden" id="card-panel-traslados" onclick="abrirPantalla('paneltraslados.html')">
-        <div class="menu-icon" style="background-color:rgba(245,158,11,.14);color:#f59e0b;border-color:rgba(245,158,11,.45);">
-          <i class="fas fa-desktop"></i>
-        </div>
-        <h3>PANEL TRASLADOS</h3>
-        <p>Panel PC para control, ENERGIS, PDF, auditoría y eliminación.</p>
+        <p>Consulta, PDF y creación de órdenes de trabajo.</p>
       </div>
 
       <div class="menu-card hidden" id="card-panel-odt" onclick="abrirPantalla('panelodt.html')">
@@ -248,7 +241,23 @@
           <i class="fas fa-desktop"></i>
         </div>
         <h3>PANEL ODT</h3>
-        <p>Panel de control, revisión y administración de ODT.</p>
+        <p>Control, revisión y auditoría de ODT.</p>
+      </div>
+
+      <div class="menu-card traslado" onclick="abrirPantalla('listatraslados.html')">
+        <div class="menu-icon">
+          <i class="fas fa-right-left"></i>
+        </div>
+        <h3>TRASLADOS</h3>
+        <p>Solicitudes y recepción de materiales.</p>
+      </div>
+
+      <div class="menu-card traslado hidden" id="card-panel-traslados" onclick="abrirPantalla('paneltraslados.html')">
+        <div class="menu-icon">
+          <i class="fas fa-chart-column"></i>
+        </div>
+        <h3>PANEL TRASL.</h3>
+        <p>Control ENERGIS, PDF y auditoría.</p>
       </div>
 
     </div>
@@ -257,7 +266,7 @@
   <script>
     document.addEventListener("DOMContentLoaded", function() {
       const usuario = sessionStorage.getItem("usuario");
-      const tipoUsuario = sessionStorage.getItem("tipo_usuario");
+      const tipoUsuario = String(sessionStorage.getItem("tipo_usuario") || "").trim();
       const sector = sessionStorage.getItem("sector");
 
       if (!usuario) {
@@ -268,11 +277,9 @@
       document.getElementById("nombre-usuario").innerText = usuario || "Usuario";
       document.getElementById("nombre-sector").innerText = sector || "Sector";
 
-      if (String(tipoUsuario) === "1") {
+      // Paneles visibles solo para usuarios tipo 1 y 2.
+      if (tipoUsuario === "1" || tipoUsuario === "2") {
         document.getElementById("card-panel-odt").classList.remove("hidden");
-      }
-
-      if (String(tipoUsuario) === "1" || String(tipoUsuario) === "2") {
         document.getElementById("card-panel-traslados").classList.remove("hidden");
       }
     });
