@@ -204,7 +204,9 @@ function aplicarModoSoloLecturaControlTraslado(r) {
     btnGuardar.style.display = soloLectura ? "none" : "inline-flex";
   }
 }
-
+function cerrarControl() {
+  document.getElementById("modalControl").style.display = "none";
+}
 async function guardarControl() {
   const btnGuardar = document.getElementById("btnGuardarControl");
   const textoOriginal = btnGuardar ? btnGuardar.innerHTML : "";
