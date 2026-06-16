@@ -205,11 +205,10 @@ function aplicarModoSoloLecturaControlTraslado(r) {
   }
 }
 
-function cerrarControl() {
-  document.getElementById("modalControl").style.display = "none";
-}
-
 async function guardarControl() {
+  const btnGuardar = document.getElementById("btnGuardarControl");
+  const textoOriginal = btnGuardar ? btnGuardar.innerHTML : "";
+
   const id = document.getElementById("ctrl_id").value;
   const fecha = document.getElementById("ctrl_fecha_energis").value;
   const idEner = document.getElementById("ctrl_id_energis").value.trim();
@@ -225,6 +224,11 @@ async function guardarControl() {
   }
 
   try {
+    if (btnGuardar) {
+      btnGuardar.disabled = true;
+      btnGuardar.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Guardando...';
+    }
+
     const res = await fetch(CONFIG.URL_APPS_SCRIPT, {
       method: "POST",
       mode: "cors",
@@ -253,8 +257,15 @@ async function guardarControl() {
     actualizarResumen();
     renderizarTabla();
     alert("Control ENERGIS guardado correctamente.");
+
   } catch (e) {
     alert("Error: " + e.message);
+
+  } finally {
+    if (btnGuardar) {
+      btnGuardar.disabled = false;
+      btnGuardar.innerHTML = textoOriginal;
+    }
   }
 }
 async function crearPDF(id) {
