@@ -383,6 +383,7 @@ function verPDF(idODT) {
   window.open(url, "_blank", "noopener");
 }
 
+
 // =====================================================
 // MODAL CONTROLES
 // =====================================================
@@ -404,9 +405,37 @@ function abrirControles(idODT) {
   document.getElementById("ctrl_actividad").value = row.col_30 || "";
   document.getElementById("ctrl_requisa").value = row.col_31 || "";
   document.getElementById("ctrl_traslado").value = row.col_32 || "";
-  document.getElementById("ctrl_gestionadoPor").value = usuarioSesion;
+  document.getElementById("ctrl_gestionadoPor").value = row.col_33 || usuarioSesion;
+
+  aplicarModoSoloLecturaControles(row);
 
   document.getElementById("modalControlesBg").style.display = "flex";
+}
+
+function aplicarModoSoloLecturaControles(row) {
+  const estado = normalizarTexto(row.col_3 || "Pendiente");
+  const soloLectura = estado === "TERMINADO" || estado === "AUDITADO";
+
+  const campos = [
+    "ctrl_estado",
+    "ctrl_reporte",
+    "ctrl_odtPadre",
+    "ctrl_hija",
+    "ctrl_evento",
+    "ctrl_actividad",
+    "ctrl_requisa",
+    "ctrl_traslado"
+  ];
+
+  campos.forEach(function(id) {
+    const el = document.getElementById(id);
+    if (el) el.disabled = soloLectura;
+  });
+
+  const btnGuardar = document.getElementById("btnGuardarControles");
+  if (btnGuardar) {
+    btnGuardar.style.display = soloLectura ? "none" : "inline-flex";
+  }
 }
 
 function prepararSelectEstadoControl(row) {
@@ -447,10 +476,20 @@ function cerrarModalControles() {
 async function guardarControles() {
   const idODT = document.getElementById("ctrl_idODT").value;
   const estado = document.getElementById("ctrl_estado").value;
+  const rowActual = buscarRegistro(idODT);
 
   if (!idODT) {
     alert("ID ODT no válido.");
     return;
+  }
+
+  if (rowActual) {
+    const estadoActual = normalizarTexto(rowActual.col_3 || "");
+    if (estadoActual === "TERMINADO" || estadoActual === "AUDITADO") {
+      alert("Esta ODT ya está " + rowActual.col_3 + " y solo puede visualizarse.");
+      cerrarModalControles();
+      return;
+    }
   }
 
   const datos = {
