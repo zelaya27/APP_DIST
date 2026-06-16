@@ -179,7 +179,30 @@ function abrirControl(id) {
   document.getElementById("ctrl_fecha_energis").value = r.col_20 || "";
   document.getElementById("ctrl_id_energis").value = r.col_21 || "";
   document.getElementById("ctrl_usuario_energis").value = r.col_22 || usuario;
+
+  aplicarModoSoloLecturaControlTraslado(r);
+
   document.getElementById("modalControl").style.display = "flex";
+}
+
+function aplicarModoSoloLecturaControlTraslado(r) {
+  const estado = norm(r.col_3 || "");
+  const soloLectura = estado === "Terminado" || estado === "Auditado";
+
+  const campos = [
+    "ctrl_fecha_energis",
+    "ctrl_id_energis"
+  ];
+
+  campos.forEach(function(id) {
+    const el = document.getElementById(id);
+    if (el) el.disabled = soloLectura;
+  });
+
+  const btnGuardar = document.getElementById("btnGuardarControl");
+  if (btnGuardar) {
+    btnGuardar.style.display = soloLectura ? "none" : "inline-flex";
+  }
 }
 
 function cerrarControl() {
@@ -190,6 +213,16 @@ async function guardarControl() {
   const id = document.getElementById("ctrl_id").value;
   const fecha = document.getElementById("ctrl_fecha_energis").value;
   const idEner = document.getElementById("ctrl_id_energis").value.trim();
+
+  const rActual = buscar(id);
+  if (rActual) {
+    const estadoActual = norm(rActual.col_3 || "");
+    if (estadoActual === "Terminado" || estadoActual === "Auditado") {
+      alert("Este traslado ya está " + rActual.col_3 + " y solo puede visualizarse.");
+      cerrarControl();
+      return;
+    }
+  }
 
   try {
     const res = await fetch(CONFIG.URL_APPS_SCRIPT, {
@@ -224,7 +257,6 @@ async function guardarControl() {
     alert("Error: " + e.message);
   }
 }
-
 async function crearPDF(id) {
   try {
     const res = await fetch(CONFIG.URL_APPS_SCRIPT, {
