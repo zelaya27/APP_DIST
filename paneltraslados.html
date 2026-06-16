@@ -77,8 +77,17 @@
       <div><label>ID traslado ENERGIS</label><input id="ctrl_id_energis" placeholder="Ingrese ID de ENERGIS"></div>
       <div class="full"><label>Usuario ENERGIS</label><input id="ctrl_usuario_energis" readonly></div>
     </div>
-    <div class="modal-actions"><button class="btn btn-cancelar" onclick="cerrarControl()">Cancelar</button><button class="btn btn-guardar" onclick="guardarControl()"><i class="fas fa-save"></i> Guardar</button></div>
-  </div>
+    <div class="modal-actions">
+  <button class="btn btn-cancelar" onclick="cerrarControl()">
+    Cancelar
+  </button>
+
+  <button id="btnGuardarControl"
+          class="btn btn-guardar"
+          onclick="guardarControl()">
+    <i class="fas fa-save"></i> Guardar
+  </button>
+</div>
 </div>
 
 <div class="modal-bg" id="modalAuditoria">
