@@ -187,7 +187,7 @@ function abrirControl(id) {
 
 function aplicarModoSoloLecturaControlTraslado(r) {
   const estado = norm(r.col_3 || "");
-  const soloLectura = estado === "Terminado" || estado === "Auditado";
+  const soloLectura = estado === "TERMINADO" || estado === "AUDITADO";
 
   const campos = [
     "ctrl_fecha_energis",
@@ -217,7 +217,7 @@ async function guardarControl() {
   const rActual = buscar(id);
   if (rActual) {
     const estadoActual = norm(rActual.col_3 || "");
-    if (estadoActual === "Terminado" || estadoActual === "Auditado") {
+    if (estadoActual === "TERMINADO" || estadoActual === "AUDITADO") {
       alert("Este traslado ya está " + rActual.col_3 + " y solo puede visualizarse.");
       cerrarControl();
       return;
