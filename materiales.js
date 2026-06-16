@@ -299,14 +299,26 @@ function mostrarImagenMaterial(url) {
 }
 
 function convertirDriveUrl(url) {
+  url = String(url || "").trim();
+
+  let id = "";
+
   if (url.includes("drive.google.com/file/d/")) {
-    const id = url.split("/d/")[1].split("/")[0];
-    return "https://drive.google.com/uc?export=view&id=" + id;
+    id = url.split("/d/")[1].split("/")[0];
+  } else if (url.includes("open?id=")) {
+    id = url.split("open?id=")[1].split("&")[0];
+  } else if (url.includes("uc?id=")) {
+    id = url.split("uc?id=")[1].split("&")[0];
+  } else if (url.includes("id=")) {
+    id = url.split("id=")[1].split("&")[0];
+  }
+
+  if (id) {
+    return "https://drive.google.com/thumbnail?id=" + id + "&sz=w1000";
   }
 
   return url;
 }
-
 // =====================================================
 // AGREGAR MATERIAL DESDE MODAL
 // =====================================================
