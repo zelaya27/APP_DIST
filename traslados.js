@@ -132,7 +132,48 @@ async function llenarMaterial(m){
   mostrarImagenMaterial(m.imagen||"");
   await consultarStockMaterialTraslado(m.codigo);
 }
-function mostrarImagenMaterial(url){ const box=document.getElementById("mat_imagen_box"); if(!url){box.innerHTML="Sin imagen disponible"; return;} if(url.includes("drive.google.com/file/d/")){ const id=url.split("/d/")[1].split("/")[0]; url="https://drive.google.com/uc?export=view&id="+id; } box.innerHTML='<img src="'+escapeAttr(url)+'" style="max-width:100%;max-height:170px;background:white;border-radius:8px;">'; }
+function mostrarImagenMaterial(url) {
+  const box = document.getElementById("mat_imagen_box");
+
+  if (!box) return;
+
+  url = String(url || "").trim();
+
+  if (!url) {
+    box.innerHTML = "Sin imagen disponible";
+    return;
+  }
+
+  const urlFinal = convertirDriveUrlImagen(url);
+
+  box.innerHTML =
+    '<img src="' + escapeAttr(urlFinal) + '" ' +
+    'style="max-width:100%;max-height:170px;background:white;border-radius:8px;" ' +
+    'onerror="this.parentElement.innerHTML=\'No se pudo cargar la imagen. Verifique permisos de Drive.\';">';
+}
+
+function convertirDriveUrlImagen(url) {
+  url = String(url || "").trim();
+
+  let id = "";
+
+  if (url.includes("drive.google.com/file/d/")) {
+    id = url.split("/d/")[1].split("/")[0];
+  } else if (url.includes("open?id=")) {
+    id = url.split("open?id=")[1].split("&")[0];
+  } else if (url.includes("uc?id=")) {
+    id = url.split("uc?id=")[1].split("&")[0];
+  } else if (url.includes("id=")) {
+    id = url.split("id=")[1].split("&")[0];
+  }
+
+  if (id) {
+    return "https://drive.google.com/thumbnail?id=" + id + "&sz=w1000";
+  }
+
+  return url;
+}
+
 async function consultarStockMaterialTraslado(codigo){
   const campo=document.getElementById("mat_existencia"); campo.value="Consultando...";
   const res=await fetch(CONFIG.URL_APPS_SCRIPT,{method:"POST",mode:"cors",body:JSON.stringify({action:"consultarStockMaterialTraslado",sector:sectorSesion,codigo:codigo,idCuadrillaEntrega:document.getElementById("col_5").value})});
